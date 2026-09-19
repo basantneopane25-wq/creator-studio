@@ -22,6 +22,13 @@
     seedI2V: { id: 'bytedance/seedance-2.0/image-to-video', kind: 'video', label: 'Seedance 2.0 (image to video)', duration: [4, 15], approx: { sec: 0.0985 } }
   };
 
+  // Where a saved Soul ID goes in each model's request. Only models that take an identity id are listed; every other
+  // model keeps receiving the creator's reference photos. UNVERIFIED: docs.higgsfield.ai publishes no Soul ID field, so
+  // this name comes from Higgsfield's older Soul API. The free estimate call rejects a wrong name (422) before any spend.
+  R.SOUL_FIELD = { soul2: 'custom_reference_id' };
+  // the id of a LOCKED creator ('' when none)
+  R.soulIdFor = c => { const cr = c && c.creator; return cr && cr.locked && typeof cr.soulId === 'string' ? cr.soulId.trim() : ''; };
+
   /* ---------- small helpers ---------- */
   R.WORDS_PER_SEC = 2.5; // comfortable spoken pace; used only to warn when a line can't fit its shot
   R.wordBudget = secs => Math.max(0, Math.floor(secs * R.WORDS_PER_SEC));
@@ -158,11 +165,14 @@
     const errors = [], warnings = [], steps = [];
     const cr = c.creator, aspect = format === 'photo' ? (d.aspect || '4:5') : '9:16';
     const total = Math.min(15, Math.max(4, parseInt(d.duration, 10) || 15));
-    const refs = R.collectRefs(c);
+    const soulId = R.soulIdFor(c);
+    // a Soul ID replaces the reference photos for stills: Soul 2 takes the id, and Kling animates that still
+    const viaSoul = !!soulId && !!R.SOUL_FIELD.soul2 && ['photo', 'ugc', 'story', 'brainrot'].includes(format);
+    const refs = viaSoul ? [] : R.collectRefs(c);
     const faces = refs.filter(r => r.role === 'face').length;
     if (!cr) errors.push('Pick a creator.');
-    else if (!faces) warnings.push(`${cr.name} has no reference photos, so the face can't be held consistent. Add 3–5 photos (front, side, three-quarter) in the creator's profile.`);
-    else if (faces < 3) warnings.push('Best consistency comes from 3–5 reference photos at different angles — you have ' + faces + '.');
+    else if (!faces && !viaSoul) warnings.push(`${cr.name} has no reference photos, so the face can't be held consistent. Add 3–5 photos (front, side, three-quarter) in the creator's profile.`);
+    else if (faces && faces < 3) warnings.push('Best consistency comes from 3–5 reference photos at different angles — you have ' + faces + '.');
     if (refs.length) steps.push(step({ id: 'refs', type: 'refs', label: 'Upload reference photos', items: refs.map(r => ({ key: r.key, label: r.label, role: r.role })) }));
     const useRefs = refs.length > 0;
 
@@ -170,7 +180,7 @@
     const stillN = format === 'photo' ? Math.max(1, Math.min(4, parseInt(d.count, 10) || 1)) : (opt.stillCandidates || 2);
     const mkStill = (scene, holding) => step({
       id: 'still', type: 'image', label: format === 'photo' ? 'Photos' : 'Choose the starting frame', model: stillModel, n: stillN, gate: format === 'photo' ? 'keep' : 'pick',
-      params: stillModel === 'grok' ? { aspect_ratio: R.stillAspect('grok', aspect), quality: 'medium', resolution: '1k' } : { aspect_ratio: R.stillAspect('soul2', aspect), resolution: '720p', batch_size: 1 },
+      params: stillModel === 'grok' ? { aspect_ratio: R.stillAspect('grok', aspect), quality: 'medium', resolution: '1k' } : { aspect_ratio: R.stillAspect('soul2', aspect), resolution: '720p', batch_size: 1, soulId: viaSoul ? soulId : undefined },
       prompt: R.stillPrompt(c, { refs: useRefs, scene, holding, framing: aspect === '9:16' ? 'Vertical framing, subject centred with room above the head, phone-camera look' : '' })
     });
 
@@ -244,7 +254,9 @@
     const m = R.MODELS[s.model], p = s.params || {};
     if (m.kind === 'image') {
       if (s.model === 'grok') { const b = { prompt: s.prompt, quality: p.quality || 'medium', resolution: p.resolution || '1k', aspect_ratio: p.aspect_ratio || 'auto' }; if (rt.refUrls && rt.refUrls.length) b.image_urls = rt.refUrls.slice(0, 10); return b; }
-      return { prompt: s.prompt, aspect_ratio: p.aspect_ratio || '9:16', resolution: p.resolution || '720p', batch_size: p.batch_size || 1 };
+      const b = { prompt: s.prompt, aspect_ratio: p.aspect_ratio || '9:16', resolution: p.resolution || '720p', batch_size: p.batch_size || 1 };
+      if (p.soulId && R.SOUL_FIELD.soul2) b[R.SOUL_FIELD.soul2] = p.soulId; // saved Soul ID instead of reference photos
+      return b;
     }
     if (s.model === 'seedRef') {
       const b = { prompt: s.prompt, duration: p.duration, resolution: p.resolution || '720p', aspect_ratio: p.aspect_ratio || '9:16', generate_audio: p.generate_audio !== false };
@@ -279,7 +291,7 @@
       ['The image is the anchor', 'Kling image-to-video keeps the face and layout from the starting frame and has no aspect-ratio setting, so the still is made vertical and the prompt only describes how the scene evolves.'],
       ['Label characters, bind speech to action', '[Character A: Name, voice tone]: "line" — one consistent label, no pronouns. Speech is written for about 2.5 words a second.'],
       ['Land the promise in 3 seconds', 'Beat 1 names the problem or the result. Test 3 hooks over the same body when a video is worth it.'],
-      ['Reference photos carry identity', '3–5 photos at different angles. The API has no Soul ID parameter, so identity comes from the reference photos, not a trained character.'],
+      ['Reference photos carry identity', '3–5 photos at different angles. Photos work everywhere; a Soul ID you trained on higgsfield.ai is sent instead where the model accepts one.'],
       ['Label AI content', 'Realistic AI people/voices must be labelled on TikTok, YouTube (“altered or synthetic”) and Instagram (“AI info”). The post kit reminds you.'],
       ['Save results at once', 'Higgsfield keeps outputs for ~7 days. Finished files are downloaded into Files automatically.']
     ],

@@ -12,7 +12,7 @@ const zlib = require('zlib');
 
 const IMG = ['1:1', '4:3', '3:4', '3:2', '2:3', '16:9', '9:16'];
 const MODELS = {
-  'higgsfield-ai/soul/v2/standard': { kind: 'image', req: ['prompt'], enums: { aspect_ratio: IMG, resolution: ['720p', '1080p'], batch_size: [1, 4] }, ints: { seed: [1, 1000000] }, price: 0.0032, other: ['style_id', 'enhance_prompt'] },
+  'higgsfield-ai/soul/v2/standard': { kind: 'image', req: ['prompt'], enums: { aspect_ratio: IMG, resolution: ['720p', '1080p'], batch_size: [1, 4] }, ints: { seed: [1, 1000000] }, price: 0.0032, other: ['style_id', 'enhance_prompt', 'custom_reference_id'] },
   'xai/grok-imagine-image-2.0': { kind: 'image', req: ['prompt'], enums: { quality: ['low', 'medium'], resolution: ['1k', '2k'], aspect_ratio: ['auto', '1:1', '1:2', '2:1', '3:2', '2:3', '4:3', '3:4', '16:9', '9:16'] }, arrays: { image_urls: [0, 10] }, price: 0.04 },
   'kling-video/v3.0/std/image-to-video': { kind: 'video', req: ['image_url'], enums: { sound: ['on', 'off'] }, ints: { duration: [3, 15] }, nums: { cfg_scale: [0, 1] }, arrays: { elements: [0, 99], multi_prompt: [1, 6] }, other: ['prompt', 'multi_shots', 'last_image_url'], perSec: 0.042 },
   'kling-video/v3.0/pro/image-to-video': { kind: 'video', req: ['image_url'], enums: { sound: ['on', 'off'] }, ints: { duration: [3, 15] }, nums: { cfg_scale: [0, 1] }, arrays: { elements: [0, 99], multi_prompt: [1, 6] }, other: ['prompt', 'multi_shots', 'last_image_url'], perSec: 0.084 },

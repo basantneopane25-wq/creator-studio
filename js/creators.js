@@ -64,7 +64,8 @@ Do not alter face, body type, or voice after this is confirmed — this identity
       body: `<div class="row" style="flex-wrap:nowrap;margin-bottom:12px;">${CS.avatar(c, true)}<div>
           <div>${c.locked ? '<span class="tag locked">🔒 locked</span> Identity is fixed.' : '<span class="tag draft">draft</span> Not locked yet.'}</div>
           <div class="muted">${esc([c.gender, c.ethnicity, c.bodyType, c.age].filter(Boolean).join(' · '))}</div>
-          <div class="muted">${esc(c.profession || '')}${c.niche ? ' · ' + esc(c.niche) : ''} · voice: ${esc(c.voiceName || 'not set')}</div></div></div>
+          <div class="muted">${esc(c.profession || '')}${c.niche ? ' · ' + esc(c.niche) : ''} · voice: ${esc(c.voiceName || 'not set')}</div>
+          <div class="muted">Soul ID: ${c.soulId ? esc(c.soulId) + (c.locked ? '' : ' (used once locked)') : 'none — using reference photos'}</div></div></div>
         ${(c.faceRefs || []).length ? `<div class="imgrow" style="margin-bottom:12px;">${c.faceRefs.map(f => `<img class="imgprev" src="${f}" alt="">`).join('')}</div>` : ''}
         <h3>Default outfits</h3><div style="margin:6px 0 14px;">${checks(S.wardrobe, c.wardrobeIds, 'wardrobeIds')}</div>
         <h3>Default backgrounds</h3><div style="margin:6px 0 14px;">${checks(S.backgrounds, c.backgroundIds, 'backgroundIds')}</div>
@@ -99,7 +100,7 @@ Do not alter face, body type, or voice after this is confirmed — this identity
 
   CS.actions.wizOpen = d => {
     const ex = d && d.id ? CS.find.creator(d.id) : null;
-    wiz = ex ? CS.clone(ex) : { name: '', gender: gFilter === 'female' ? 'female' : 'male', ethnicity: '', bodyType: '', age: '20s-30s', profession: '', niche: '', faceRefs: [], clothingDesc: '', voiceMode: 'preset', voiceName: '', locked: false, wardrobeIds: [], backgroundIds: [] };
+    wiz = ex ? CS.clone(ex) : { name: '', gender: gFilter === 'female' ? 'female' : 'male', ethnicity: '', bodyType: '', age: '20s-30s', profession: '', niche: '', faceRefs: [], soulId: '', soulTrained: false, clothingDesc: '', voiceMode: 'preset', voiceName: '', locked: false, wardrobeIds: [], backgroundIds: [] };
     wiz.editId = ex ? ex.id : null;
     step = 0; renderWiz();
   };
@@ -116,7 +117,9 @@ Do not alter face, body type, or voice after this is confirmed — this identity
     } else if (step === 1) {
       b = F('Face reference photos (for Soul ID training)', '<input type="file" accept="image/*" multiple data-bind="wiz.faces">')
         + `<div class="imgrow">${wiz.faceRefs.map((f, i) => `<span style="position:relative;"><img class="imgprev" src="${f}" alt=""><button class="icon-btn" style="position:absolute;top:-8px;right:-8px;background:var(--panel);border:1px solid var(--border);padding:0 5px;font-size:12px;" data-action="wizDropFace" data-i="${i}" aria-label="Remove">✕</button></span>`).join('')}</div>
-        <p class="muted">Photos are shrunk and stay in this browser. When you generate, attach the same photos in the Claude chat so Higgsfield can train Soul ID.</p>`;
+        <p class="muted">Photos are shrunk and stay in this browser. When you generate, attach the same photos in the Claude chat so Higgsfield can train Soul ID.</p>`
+        + F('Higgsfield Soul ID (optional)', inp('soulId', 'Paste the ID from higgsfield.ai'))
+        + '<p class="muted">Train Soul ID yourself on higgsfield.ai (this app does not train it), then paste the ID here. Once set and the creator is locked, the app sends this ID instead of re-uploading the photos wherever the model accepts it. Editable until you lock the creator.</p>';
     } else if (step === 2) {
       b = F('Ethnicity', `<select data-bind="wiz.ethnicity"><option value="">Select</option>${ETH.map(e => `<option ${wiz.ethnicity === e ? 'selected' : ''}>${e}</option>`).join('')}</select>`)
         + F('Body type', `<select data-bind="wiz.bodyType"><option value="">Select</option>${BODY[wiz.gender].map(x => `<option ${wiz.bodyType === x ? 'selected' : ''}>${x}</option>`).join('')}</select>`)
@@ -127,7 +130,7 @@ Do not alter face, body type, or voice after this is confirmed — this identity
         + F('Voice name / label', `<input type="text" data-bind="wiz.voiceName" value="${esc(wiz.voiceName)}" placeholder="${wiz.voiceMode === 'preset' ? 'e.g. Preset: Deep calm male' : 'e.g. Clone: my-sample-v1'}">`)
         + '<p class="muted">Saved with the creator and reused on every video — never regenerated per video.</p>';
     } else {
-      b = `<table>${[['Name', wiz.name], ['Gender', wiz.gender], ['Profession', wiz.profession], ['Niche', wiz.niche], ['Ethnicity', wiz.ethnicity], ['Body type', wiz.bodyType], ['Face photos', wiz.faceRefs.length + ' photo(s)'], ['Voice', wiz.voiceName]].map(r => `<tr><th>${r[0]}</th><td>${esc(r[1]) || '<span class="muted">—</span>'}</td></tr>`).join('')}</table>
+      b = `<table>${[['Name', wiz.name], ['Gender', wiz.gender], ['Profession', wiz.profession], ['Niche', wiz.niche], ['Ethnicity', wiz.ethnicity], ['Body type', wiz.bodyType], ['Face photos', wiz.faceRefs.length + ' photo(s)'], ['Soul ID', wiz.soulId],['Voice', wiz.voiceName]].map(r => `<tr><th>${r[0]}</th><td>${esc(r[1]) || '<span class="muted">—</span>'}</td></tr>`).join('')}</table>
         <p class="muted">Saved as a draft. Use “Confirm &amp; lock” on the profile once you’re happy with the generated Soul ID — after that face, body and voice can’t be edited.</p>`;
     }
     CS.ui.modal({
@@ -153,7 +156,8 @@ Do not alter face, body type, or voice after this is confirmed — this identity
     if (step < 4) { step++; renderWiz(); return; }
     const id = wiz.editId; delete wiz.editId;
     let saved;
-    if (id) { saved = CS.find.creator(id); Object.assign(saved, wiz); }
+    wiz.soulId = String(wiz.soulId || '').trim(); wiz.soulTrained = !!wiz.soulId;
+    if (id) { saved = CS.find.creator(id); if (saved.locked) { wiz.soulId = saved.soulId; wiz.soulTrained = saved.soulTrained; } Object.assign(saved, wiz); } // frozen once locked
     else { wiz.id = CS.nid('cr'); CS.S.creators.push(wiz); saved = wiz; gFilter = 'all'; }
     CS.media.folderFor(saved.id); // fixes the folder name now, so later renames never move files
     CS.media.ensureFolders(saved).catch(() => {}); // Pics + Vids folders appear on the phone straight away (if connected)

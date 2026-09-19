@@ -100,20 +100,21 @@
   function side(f, d) {
     const chk = CS.checkDraft(cur, d), ready = !chk.missing.length;
     const prompt = CS.buildPrompt(cur, d);
-    return CS.createExt.apiBox(cur, f, d) + `<div class="card">
-      <div class="row between"><h2>Or copy for Claude + Higgsfield</h2><span class="tag ${ready ? 'done' : 'draft'}">${ready ? 'Ready' : 'Needs ' + chk.missing.length + ' more'}</span></div>
+    return `<div class="card">
+      <div class="row between"><h2>Prompt for Claude + Higgsfield</h2><span class="tag ${ready ? 'done' : 'draft'}">${ready ? 'Ready' : 'Needs ' + chk.missing.length + ' more'}</span></div>
       ${chk.missing.length ? `<ul class="checklist miss">${chk.missing.map(m => `<li>Add ${esc(m)}</li>`).join('')}</ul>` : ''}
       ${chk.warn.length ? `<ul class="checklist warn">${chk.warn.map(m => `<li>${esc(m)}</li>`).join('')}</ul>` : ''}
-      <pre class="prompt tall">${esc(prompt)}</pre>
+      <textarea class="prompt tall" id="promptBox" readonly rows="14" style="width:100%;">${esc(prompt)}</textarea>
       ${f.image ? `<details><summary class="muted" style="cursor:pointer;">Prompt used by “Generate here”</summary><pre class="prompt">${esc(f.imagePrompt(d, CS.buildContext(d)))}</pre></details>` : ''}
       <div class="row">
+        <button class="btn" data-action="createCopy" ${ready ? '' : 'disabled'}>Copy</button>
         ${f.image ? `<button class="btn" data-action="createGenerate" ${ready && !gen.busy ? '' : 'disabled'}>${gen.busy ? 'Generating…' : '✨ Generate here'}</button>` : ''}
-        <button class="btn ${f.image ? 'secondary' : ''}" data-action="createSend" ${ready ? '' : 'disabled'}>${f.image ? 'Copy for Higgsfield &amp; queue' : 'Copy &amp; add to queue'}</button>
+        <button class="btn secondary" data-action="createSend" ${ready ? '' : 'disabled'}>${f.image ? 'Copy for Higgsfield &amp; queue' : 'Copy &amp; add to queue'}</button>
         <button class="btn secondary" data-action="createDraft" ${ready ? '' : 'disabled'}>Save as draft</button>
       </div>
       <div class="muted" style="margin-top:8px;">${f.image
-        ? 'Generate here makes pictures right now. To keep the creator’s locked face (Soul ID), copy the prompt into your Claude chat with the Higgsfield connector on instead.'
-        : 'Paste the copied prompt into your Claude chat with the Higgsfield connector on. Then mark the job done in the Queue and attach the finished file.'}</div>
+        ? 'Generate here makes pictures right now with your image provider. To keep the creator’s Soul ID face, paste the copied prompt into your Claude chat (Higgsfield connector on) instead.'
+        : 'Paste the copied prompt into a Claude chat (phone or desktop) with the Higgsfield connector on. Then mark the job done in the Queue and attach the finished file.'}</div>
       <button class="link-btn" data-action="createReset">Reset this form</button>
     </div>`;
   }
@@ -275,6 +276,7 @@
     CS.save();
     CS.ui.toast(status === 'sent' ? 'Copied — and added to the queue.' : 'Saved as a draft in the queue.', { label: 'Open queue', fn: () => CS.go('queue') });
   }
+  CS.actions.createCopy = () => { const d = draft(cur); if (CS.checkDraft(cur, d).missing.length) { CS.ui.toast('Fill in the missing items first.'); return; } CS.copy(CS.buildPrompt(cur, d)); };
   CS.actions.createSend = () => submit('sent');
   CS.actions.createDraft = () => submit('draft');
   CS.actions.createReset = () => CS.ui.confirm('Clear everything you entered for this format?', () => { CS.S.drafts[cur] = CS.blankDraft(cur); CS.save(); }, { yes: 'Reset', title: 'Reset form' });

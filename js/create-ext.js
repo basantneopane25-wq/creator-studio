@@ -1,5 +1,5 @@
 /* Create-screen extensions for producing inside the app: the script (beats) editor, the video-to-copy upload,
-   the loop option and the "Make it in the app" box (live plan + price preview). Hooks are called from create.js. */
+   and the loop option. Hooks are called from create.js. */
 (function (CS) {
   const esc = CS.esc, R = window.CSRecipes;
   const X = CS.createExt = {};
@@ -44,20 +44,6 @@
     return `<label class="row" style="gap:8px;margin:0 0 12px;"><input type="checkbox" data-bind="create.loop" ${d.loop ? 'checked' : ''}><span class="muted">Make it loop — the clip ends on its first frame (loops help replays)</span></label>`;
   };
 
-  /* ---------- the "Make it in the app" box ---------- */
-  X.apiBox = function (fid, f, d) {
-    const P = CS.produce, plan = P.planFor(fid, d);
-    const steps = plan.steps.filter(s => s.model).map(s => `<li>${esc((s.optional ? '(optional) ' : '') + s.label + ' — ' + R.MODELS[s.model].label + (s.n > 1 ? ' ×' + s.n : ''))}</li>`).join('');
-    return `<div class="card api-box"><div class="row between"><h2>Make it in the app</h2><span class="tag ${P.ready() ? 'done' : 'draft'}">${P.ready() ? 'Higgsfield connected' : 'not set up'}</span></div>
-      <ul class="p-steps">${steps}</ul>
-      <div class="muted">≈ <b>$${plan.approxUsd.toFixed(2)}</b> for the first draft at list prices${plan.unknown ? ' (+ steps Higgsfield prices)' : ''}. You see the exact price and confirm before any money is spent.</div>
-      ${plan.errors.length ? `<ul class="checklist miss">${plan.errors.map(e => `<li>${esc(e)}</li>`).join('')}</ul>` : ''}
-      ${plan.warnings.length ? `<ul class="checklist warn">${plan.warnings.map(e => `<li>${esc(e)}</li>`).join('')}</ul>` : ''}
-      <button class="btn big" data-action="createProduce" ${plan.errors.length ? 'disabled' : ''}>🚀 Produce in app</button>
-      ${P.ready() ? '' : '<div class="muted" style="margin-top:6px;">You can plan and price it here first, but running it needs the Higgsfield API — <a href="#/settings">set it up in Settings</a>.</div>'}
-    </div>`;
-  };
-
   /* ---------- form bindings (return true when handled) ---------- */
   X.bind = function (name, el, d) {
     const A = api();
@@ -84,9 +70,4 @@
   CS.actions.beatsInit = () => { const A = api(), d = A.draft(A.cur()); d.beats = R.defaultBeats(A.cur(), ctxFor(d), parseInt(d.duration, 10) || 15).map(b => Object.assign({}, b)); A.persist(); A.rerender(); };
   CS.actions.beatDel = el => { const A = api(), d = A.draft(A.cur()); d.beats.splice(+el.i, 1); A.persist(); A.rerender(); };
   CS.actions.beatAdd = () => { const A = api(), d = A.draft(A.cur()); if ((d.beats || []).length < 6) { d.beats.push({ see: '', say: '', secs: 3 }); A.persist(); A.rerender(); } };
-  CS.actions.createProduce = async () => {
-    const A = api(), d = A.draft(A.cur()), res = await CS.produce.create(A.cur(), d, true);
-    if (res.errors) { CS.ui.toast(res.errors[0]); return; }
-    CS.go('produce/' + res.job.id);
-  };
 })(window.CS);

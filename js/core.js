@@ -67,7 +67,7 @@ window.CS = { S: null, actions: {}, binds: {}, views: {}, ui: {} };
     ['creators', 'wardrobe', 'backgrounds', 'accessories', 'brands', 'trends', 'jobs'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
     if (!Array.isArray(s.settings.creditLog)) s.settings.creditLog = [];
     if (!s.drafts || typeof s.drafts !== 'object') s.drafts = {};
-    s.creators.forEach(c => { c.wardrobeIds = c.wardrobeIds || []; c.backgroundIds = c.backgroundIds || []; c.faceRefs = c.faceRefs || []; });
+    s.creators.forEach(c => { c.wardrobeIds = c.wardrobeIds || []; c.backgroundIds = c.backgroundIds || []; c.faceRefs = c.faceRefs || []; c.soulId = typeof c.soulId === 'string' ? c.soulId : ''; c.soulTrained = !!c.soulTrained; });
     s.v = VERSION;
     // v1 credit-log entries weren't tied to their job; link them so editing a job's credits can't double-count
     s.jobs.forEach(j => {
