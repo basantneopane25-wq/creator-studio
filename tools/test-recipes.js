@@ -104,6 +104,39 @@ const RT = { refUrls: ['https://cdn.x/r1.jpg', 'https://cdn.x/r2.jpg', 'https://
     const { MODELS } = require('./mock-higgsfield'); Object.values(R.MODELS).forEach(m => assert.ok(MODELS[m.id], 'unknown endpoint ' + m.id) || true);
   });
 
+  console.log('soul id');
+  const soulCr = Object.assign({}, creator, { locked: true, soulId: '  soul-abc-123 ', soulTrained: true });
+  await t('locked creator with soul id: still uses Soul 2, payload carries the id, no photos sent; accepted by the mock', async () => {
+    const pl = R.plan('ugc', base, ctx({ creator: soulCr }));
+    assert.deepStrictEqual(pl.errors, []); assert.ok(!pl.steps.some(s => s.id === 'refs'), 'no photo upload step');
+    const still = pl.steps.find(s => s.id === 'still'); assert.strictEqual(still.model, 'soul2');
+    const body = R.buildBody(still, RT); assert.strictEqual(body.custom_reference_id, 'soul-abc-123'); assert.ok(!body.image_urls);
+    const est = await cl.estimate(R.MODELS.soul2.id, body); assert.ok(est.usd > 0);
+    const sub = await cl.submit(R.MODELS.soul2.id, body);
+    assert.strictEqual(mock.state.requests[sub.requestId].body.custom_reference_id, 'soul-abc-123'); // what the server actually received
+  });
+  await t('photo format also uses the soul id; Kling still receives the still, not the id', () => {
+    const pl = R.plan('photo', Object.assign({}, base, { concept: 'coffee' }), ctx({ creator: soulCr }));
+    assert.strictEqual(pl.steps.find(s => s.id === 'still').model, 'soul2');
+    const v = R.buildBody(R.plan('ugc', base, ctx({ creator: soulCr })).steps.find(s => s.id === 'video'), RT);
+    assert.ok(!('custom_reference_id' in v) && v.image_url === RT.stillUrl);
+  });
+  await t('no soul id (or not locked): identical to before — refs re-attached, no soul field', () => {
+    for (const cr of [creator, Object.assign({}, creator, { locked: false, soulId: 'soul-abc-123' }), Object.assign({}, creator, { locked: true, soulId: '   ' })]) {
+      const pl = R.plan('photo', Object.assign({}, base, { concept: 'coffee' }), ctx({ creator: cr }));
+      assert.deepStrictEqual(pl.steps.map(s => s.id), ['refs', 'still']);
+      const b = R.buildBody(pl.steps[1], RT); assert.strictEqual(pl.steps[1].model, 'grok'); assert.strictEqual(b.image_urls.length, 3); assert.ok(!JSON.stringify(b).includes('soul-abc'));
+    }
+  });
+  await t('sing/copy (Seedance has no id field) keep sending photos even with a soul id', () => {
+    const pl = R.plan('sing', Object.assign({}, base, { audioFile: { secs: 10 } }), ctx({ creator: soulCr }));
+    assert.ok(pl.steps.some(s => s.id === 'refs')); assert.strictEqual(R.buildBody(pl.steps.find(s => s.id === 'video'), RT).image_urls.length, 3);
+  });
+  await t('soul id without refs and without photos raises no "no reference photos" warning', () => {
+    const pl = R.plan('ugc', base, ctx({ creator: Object.assign({}, soulCr, { faceRefs: [] }) }));
+    assert.ok(!pl.warnings.some(w => /no reference photos/.test(w)));
+  });
+
   await mock.close();
   console.log(`\n${pass} passed, ${fail} failed`); process.exitCode = fail ? 1 : 0;
 })();

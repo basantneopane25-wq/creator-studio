@@ -20,7 +20,7 @@
         <div class="card"><h2>Models used (Higgsfield API)</h2><div style="overflow:auto;"><table><tr><th>Model</th><th>Type</th><th>List price</th><th>Endpoint</th></tr>${rows}</table></div>
           <p class="muted">List prices seen in September 2026, some under launch discounts. Higgsfield’s free estimate endpoint is the authority and is checked before every spend.</p></div>
         <div class="card"><h2>Honest limits</h2><ul class="todo">
-          <li><span class="dot"></span><span class="t">Identity comes from reference photos, not a trained Soul ID (the API has none). Expect very good, not perfect, consistency.</span></li>
+          <li><span class="dot"></span><span class="t">Identity comes from reference photos, or from a Soul ID you trained on higgsfield.ai and pasted into the creator (used for stills when the creator is locked). Expect very good, not perfect, consistency.</span></li>
           <li><span class="dot"></span><span class="t">Voices are described (“deep calm male voice”), not locked, so they can differ between videos.</span></li>
           <li><span class="dot"></span><span class="t">The API is billed separately from a Higgsfield plan. The plan’s “unlimited” windows don’t apply to it.</span></li>
           <li><span class="dot"></span><span class="t">The app can’t open TikTok/Instagram links; to copy a video, upload the MP4 (2–15 seconds).</span></li></ul></div>
