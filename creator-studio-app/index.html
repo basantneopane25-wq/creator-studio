@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Creator Studio</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#111418">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Creators">
+<style>
+  :root{
+    --bg:#111418; --panel:#1a1e24; --panel2:#20252c; --border:#2c333c;
+    --text:#e7ebf0; --muted:#8b96a5; --accent:#5b8def; --accent2:#3aa76d;
+    --warn:#d99a3a; --danger:#d9534f; --locked:#7c5cd1;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px;}
+  header{display:flex;align-items:center;gap:16px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;flex-wrap:wrap;}
+  header h1{font-size:16px;margin:0;white-space:nowrap;}
+  nav{display:flex;gap:4px;flex-wrap:wrap;}
+  nav button{background:transparent;border:1px solid transparent;color:var(--muted);padding:6px 10px;border-radius:6px;cursor:pointer;font-size:13px;}
+  nav button.active{background:var(--panel2);color:var(--text);border-color:var(--border);}
+  nav button:hover{color:var(--text);}
+  .credit-pill{margin-left:auto;font-size:12px;color:var(--muted);background:var(--panel2);padding:5px 10px;border-radius:20px;border:1px solid var(--border);white-space:nowrap;}
+  main{padding:16px;max-width:1200px;margin:0 auto;}
+  .view{display:none;}
+  .view.active{display:block;}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:12px;}
+  .card h2{margin:0 0 10px;font-size:15px;}
+  .card h3{margin:0 0 8px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  label{display:block;font-size:12px;color:var(--muted);margin:8px 0 3px;}
+  input[type=text],input[type=number],input[type=url],input[type=date],select,textarea{
+    width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--text);
+    padding:7px 8px;border-radius:6px;font-size:13px;font-family:inherit;
+  }
+  textarea{min-height:60px;resize:vertical;}
+  input[type=file]{font-size:12px;color:var(--muted);}
+  button.btn{background:var(--accent);color:#fff;border:none;padding:7px 12px;border-radius:6px;cursor:pointer;font-size:13px;}
+  button.btn.secondary{background:var(--panel2);color:var(--text);border:1px solid var(--border);}
+  button.btn.green{background:var(--accent2);}
+  button.btn.warn{background:var(--warn);color:#221a05;}
+  button.btn.danger{background:var(--danger);}
+  button.btn.small{padding:4px 8px;font-size:12px;}
+  button.btn:disabled{opacity:.4;cursor:not-allowed;}
+  .tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:10px;background:var(--panel2);border:1px solid var(--border);color:var(--muted);margin-right:4px;}
+  .tag.locked{background:rgba(124,92,209,.2);color:#b4a3ee;border-color:var(--locked);}
+  .tag.male{background:rgba(91,141,239,.15);color:#8fb2f5;}
+  .tag.female{background:rgba(217,90,164,.15);color:#e79dc9;}
+  .tag.done{background:rgba(58,167,109,.18);color:#7fd9a6;}
+  .tag.draft{background:rgba(217,154,58,.18);color:#e8b866;}
+  .item{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px;}
+  .item h4{margin:0 0 6px;font-size:14px;}
+  .subtabs{display:flex;gap:6px;margin-bottom:12px;}
+  .subtabs button{background:var(--panel2);border:1px solid var(--border);color:var(--muted);padding:6px 14px;border-radius:6px;cursor:pointer;}
+  .subtabs button.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+  pre.prompt{white-space:pre-wrap;background:#0d1013;border:1px solid var(--border);padding:10px;border-radius:6px;font-size:12px;color:#c8d3e0;max-height:220px;overflow:auto;}
+  .muted{color:var(--muted);font-size:12px;}
+  .field-locked{opacity:.6;pointer-events:none;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);}
+  th{color:var(--muted);font-weight:500;font-size:12px;}
+  .imgprev{max-width:70px;max-height:70px;border-radius:6px;border:1px solid var(--border);object-fit:cover;}
+  .imgrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+  .empty{color:var(--muted);font-size:13px;padding:14px;text-align:center;}
+  .close-x{cursor:pointer;color:var(--muted);float:right;}
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-start;justify-content:center;padding:30px 12px;z-index:50;overflow:auto;}
+  .modal-bg.open{display:flex;}
+  .modal{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px;max-width:640px;width:100%;}
+  .stepbar{display:flex;gap:4px;margin-bottom:14px;}
+  .stepbar div{flex:1;height:4px;background:var(--panel2);border-radius:2px;}
+  .stepbar div.on{background:var(--accent);}
+  footer{text-align:center;color:var(--muted);font-size:11px;padding:20px;}
+  .toast{position:fixed;bottom:16px;right:16px;background:var(--panel2);border:1px solid var(--border);padding:10px 14px;border-radius:8px;font-size:13px;display:none;z-index:100;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎬 Creator Studio</h1>
+  <nav id="nav"></nav>
+  <div class="credit-pill" id="creditPill">credits: --</div>
+</header>
+
+<main>
+
+  <!-- DASHBOARD -->
+  <div class="view" id="view-dashboard">
+    <div class="card">
+      <h2>Overview</h2>
+      <div class="grid" id="dashStats"></div>
+    </div>
+    <div class="card">
+      <h2>Recent jobs</h2>
+      <div id="dashJobs"></div>
+    </div>
+    <div class="card">
+      <h2>Quick start</h2>
+      <p class="muted">This tool is your creator database, prompt builder and job/credit tracker. Actual generation happens by pasting the copied prompts into a Claude conversation with the Higgsfield MCP connector active. Nothing here calls Higgsfield directly — that keeps your account credentials out of a local file.</p>
+      <div class="row">
+        <button class="btn" onclick="go('creators')">+ New creator</button>
+        <button class="btn secondary" onclick="go('trends')">Log a trend</button>
+        <button class="btn secondary" onclick="go('settings')">Settings / backup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CREATORS -->
+  <div class="view" id="view-creators">
+    <div class="subtabs" id="creatorSubtabs">
+      <button data-g="male" class="active">Male</button>
+      <button data-g="female">Female</button>
+    </div>
+    <div class="row" style="justify-content:space-between;margin-bottom:10px;">
+      <span class="muted" id="creatorCount"></span>
+      <button class="btn" onclick="openWizard()">+ New creator</button>
+    </div>
+    <div class="grid" id="creatorGrid"></div>
+  </div>
+
+  <!-- BRAIN ROT -->
+  <div class="view" id="view-brainrot">
+    <div class="card">
+      <h2>New brain rot short</h2>
+      <label>Prompt / concept</label>
+      <textarea id="br_prompt" placeholder="e.g. a raccoon explains crypto to a pigeon, absurdist, fast cuts"></textarea>
+      <div class="row">
+        <div style="flex:1;min-width:180px;">
+          <label>Style</label>
+          <select id="br_style">
+            <option>Recommended: chaotic subway-surfer split-screen, high saturation, meme captions</option>
+            <option>Minimal narrator, single subject, deadpan</option>
+            <option>Fast-cut collage, stock footage mashup</option>
+            <option>Custom (describe in prompt)</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:180px;">
+          <label>Brand promo (optional)</label>
+          <select id="br_brand"></select>
+        </div>
+      </div>
+      <label>Trending audio to reuse (optional — leave blank to generate new audio)</label>
+      <input type="text" id="br_audio" placeholder="e.g. name/link of the trending sound, or 'original audio from &lt;tiktok link&gt;'">
+      <div class="row" style="margin-top:10px;">
+        <button class="btn" onclick="createVideoJob('brainrot')">Generate prompt + queue job</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Brain rot jobs</h2>
+      <div id="brainrotJobs"></div>
+    </div>
+  </div>
+
+  <!-- STORY -->
+  <div class="view" id="view-story">
+    <div class="card">
+      <h2>New story short</h2>
+      <label>Prompt / concept</label>
+      <textarea id="st_prompt" placeholder="e.g. a 45-second twist story about a barista who reads minds"></textarea>
+      <div class="row">
+        <div style="flex:1;min-width:180px;">
+          <label>Style</label>
+          <select id="st_style">
+            <option>Recommended: cinematic voiceover, slow push-in, text-on-screen hook</option>
+            <option>POV confessional, handheld</option>
+            <option>Animated storybook stills + narration</option>
+            <option>Custom (describe in prompt)</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:180px;">
+          <label>Brand promo (optional)</label>
+          <select id="st_brand"></select>
+        </div>
+      </div>
+      <label>Trending audio to reuse (optional — leave blank to generate new audio)</label>
+      <input type="text" id="st_audio" placeholder="e.g. name/link of the trending sound, or 'original audio from &lt;tiktok link&gt;'">
+      <div class="row" style="margin-top:10px;">
+        <button class="btn" onclick="createVideoJob('story')">Generate prompt + queue job</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Story jobs</h2>
+      <div id="storyJobs"></div>
+    </div>
+  </div>
+
+  <!-- SING / LIPSYNC -->
+  <div class="view" id="view-sing">
+    <div class="card">
+      <h2>New lip-sync / performance video</h2>
+      <p class="muted">For an AI song or a viral sound your creator should lip-sync and act to — not speak in their own saved voice.</p>
+      <label>Creator</label>
+      <select id="sg_creator"></select>
+      <div class="row">
+        <label style="margin:8px 0 3px;width:100%;">Audio source</label>
+        <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px;color:var(--text);"><input type="radio" name="sg_source" value="upload" checked onchange="sgToggleSource()"> Upload an audio file (AI song)</label>
+        <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px;color:var(--text);"><input type="radio" name="sg_source" value="trend" onchange="sgToggleSource()"> Reference a trending sound</label>
+      </div>
+      <div id="sg_uploadWrap">
+        <label>Audio file</label>
+        <input type="file" id="sg_file" accept="audio/*" onchange="sgAudioPicked(event)">
+        <div class="muted" id="sg_fileInfo">No file selected. The file itself isn't stored here — attach the same file when you paste this prompt into the Claude chat.</div>
+      </div>
+      <div id="sg_trendWrap" style="display:none;">
+        <label>Trending sound (name / link)</label>
+        <input type="text" id="sg_trendAudio" placeholder="e.g. name/link of the trending sound">
+      </div>
+      <div class="row">
+        <div style="flex:1;min-width:220px;">
+          <label>Performance style</label>
+          <select id="sg_style">
+            <option>Recommended: energetic lip-sync, hand gestures, beat-synced cuts</option>
+            <option>Calm solo performance, static camera</option>
+            <option>Duet-style split screen</option>
+            <option>Dance + lip-sync</option>
+            <option>Custom (describe in notes)</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:180px;">
+          <label>Brand promo (optional)</label>
+          <select id="sg_brand"></select>
+        </div>
+      </div>
+      <label>Notes (choreography, outfit, background reference, mood)</label>
+      <textarea id="sg_notes" placeholder="e.g. use the 'stage lights' background and the 'sequin jacket' outfit"></textarea>
+      <div class="row" style="margin-top:10px;">
+        <button class="btn" onclick="createSingJob()">Generate prompt + queue job</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Lip-sync / performance jobs</h2>
+      <div id="singJobs"></div>
+    </div>
+  </div>
+
+  <!-- COPY TREND -->
+  <div class="view" id="view-copy">
+    <div class="card">
+      <h2>Copy a trending video</h2>
+      <label>Video link (TikTok / Insta / Shorts)</label>
+      <input type="url" id="copy_url" placeholder="https://...">
+      <label>Which creator should recreate it?</label>
+      <select id="copy_creator"></select>
+      <label style="display:flex;align-items:center;gap:6px;margin:8px 0 3px;font-size:13px;color:var(--text);"><input type="checkbox" id="copy_sameaudio"> Use the exact original audio (creator lip-syncs, doesn't speak new lines)</label>
+      <label>Anything to change (optional)</label>
+      <textarea id="copy_notes" placeholder="e.g. swap the punchline, keep the hook, use my accessory X"></textarea>
+      <div class="row" style="margin-top:10px;">
+        <button class="btn" onclick="buildCopyPrompt()">Build recreate prompt</button>
+      </div>
+      <pre class="prompt" id="copy_out" style="display:none;"></pre>
+      <div class="row" id="copy_actions" style="display:none;margin-top:6px;">
+        <button class="btn secondary small" onclick="copyText('copy_out')">Copy to clipboard</button>
+        <button class="btn green small" onclick="queueFromPre('copy_out','copy')">Queue as job</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIBRARY -->
+  <div class="view" id="view-library">
+    <div class="subtabs" id="libSubtabs">
+      <button data-l="wardrobe" class="active">Wardrobe</button>
+      <button data-l="backgrounds">Backgrounds</button>
+      <button data-l="accessories">Accessories</button>
+    </div>
+    <div id="libPane"></div>
+  </div>
+
+  <!-- BRANDS -->
+  <div class="view" id="view-brands">
+    <div class="card">
+      <h2>New brand</h2>
+      <div class="row">
+        <div style="flex:1;min-width:160px;"><label>Brand name</label><input type="text" id="brand_name"></div>
+        <div style="flex:2;min-width:220px;"><label>Notes (products, deal terms, links)</label><input type="text" id="brand_notes"></div>
+      </div>
+      <button class="btn" style="margin-top:8px;" onclick="addBrand()">Add brand</button>
+    </div>
+    <div class="card"><h2>Brands</h2><div id="brandList"></div></div>
+  </div>
+
+  <!-- TRENDS -->
+  <div class="view" id="view-trends">
+    <div class="card">
+      <h2>Trend log</h2>
+      <p class="muted">No platform gives a static local page live trend data. Ask me (Claude) in chat to pull current trending sounds/formats — I'll research it and you log the useful ones here so they carry into your creator jobs.</p>
+      <div class="row">
+        <div style="flex:1;min-width:120px;"><label>Platform</label>
+          <select id="tr_platform"><option>TikTok</option><option>Instagram Reels</option><option>YouTube Shorts</option></select>
+        </div>
+        <div style="flex:2;min-width:220px;"><label>Trend / sound / format</label><input type="text" id="tr_topic"></div>
+        <div style="flex:2;min-width:220px;"><label>Note / link</label><input type="text" id="tr_note"></div>
+      </div>
+      <button class="btn" style="margin-top:8px;" onclick="addTrend()">Log trend</button>
+    </div>
+    <div class="card"><h2>Logged trends</h2><div id="trendList"></div></div>
+  </div>
+
+  <!-- JOBS -->
+  <div class="view" id="view-jobs">
+    <div class="card">
+      <h2>All jobs</h2>
+      <p class="muted">Draft → paste into Claude chat (Higgsfield MCP) → mark Done with the actual credits it used and where the file landed (Drive link, etc).</p>
+      <div id="jobsTable"></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="view" id="view-settings">
+    <div class="card">
+      <h2>Higgsfield plan & credit budget</h2>
+      <div class="row">
+        <div style="flex:1;min-width:160px;">
+          <label>Plan</label>
+          <select id="set_plan">
+            <option>Not subscribed yet</option>
+            <option>Starter (~200-270 credits/mo)</option>
+            <option>Plus (~1000-1200 credits/mo)</option>
+            <option>Ultra (~3000+ credits/mo)</option>
+            <option>Custom</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:140px;"><label>Monthly credit allowance</label><input type="number" id="set_allowance" value="1000"></div>
+        <div style="flex:1;min-width:140px;"><label>Monthly $ budget</label><input type="number" id="set_budget" value="50"></div>
+      </div>
+      <button class="btn" style="margin-top:8px;" onclick="saveSettings()">Save</button>
+    </div>
+    <div class="card">
+      <h2>Credit usage log</h2>
+      <p class="muted">Marking a job "Done" with a credit amount logs it here automatically. You can also add a manual entry.</p>
+      <div class="row">
+        <input type="number" id="manual_credit" placeholder="credits" style="max-width:120px;">
+        <input type="text" id="manual_note" placeholder="note" style="flex:1;">
+        <button class="btn secondary" onclick="manualCreditLog()">Log</button>
+      </div>
+      <div id="creditLogTable" style="margin-top:10px;"></div>
+    </div>
+    <div class="card">
+      <h2>Backup</h2>
+      <p class="muted">Everything lives in this browser's local storage only. Export regularly.</p>
+      <div class="row">
+        <button class="btn secondary" onclick="exportData()">Export backup (.json)</button>
+        <button class="btn secondary" onclick="document.getElementById('importFile').click()">Import backup</button>
+        <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importData(event)">
+        <button class="btn danger" onclick="resetAll()">Erase all data</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>Creator Studio — local tool, no external calls. Data stays in this browser.</footer>
+<div class="toast" id="toast"></div>
+
+<!-- CREATOR WIZARD MODAL -->
+<div class="modal-bg" id="wizardBg">
+  <div class="modal">
+    <span class="close-x" onclick="closeWizard()">✕ close</span>
+    <h2 id="wizTitle">New creator</h2>
+    <div class="stepbar" id="wizSteps"><div></div><div></div><div></div><div></div><div></div></div>
+    <div id="wizBody"></div>
+    <div class="row" style="margin-top:14px;justify-content:space-between;">
+      <button class="btn secondary" id="wizBack" onclick="wizNav(-1)">Back</button>
+      <button class="btn" id="wizNext" onclick="wizNav(1)">Next</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- STATE ---------- */
+const DEFAULT_STATE = {
+  creators: [], wardrobe: [], backgrounds: [], accessories: [], brands: [], trends: [], jobs: [],
+  settings: { plan: "Not subscribed yet", allowance: 1000, budget: 50, creditLog: [] },
+  seq: 1
+};
+let S = load();
+
+function load(){
+  try{
+    const raw = localStorage.getItem('creatorStudioData');
+    if(!raw) return JSON.parse(JSON.stringify(DEFAULT_STATE));
+    const parsed = JSON.parse(raw);
+    return Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), parsed);
+  }catch(e){ console.error(e); return JSON.parse(JSON.stringify(DEFAULT_STATE)); }
+}
+function save(){
+  try{ localStorage.setItem('creatorStudioData', JSON.stringify(S)); }
+  catch(e){ toast('Storage full — export a backup and remove some reference images.'); }
+  renderAll();
+}
+function nid(prefix){ return prefix + (S.seq++); }
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.style.display='block'; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display='none', 2600); }
+function copyText(id){ const el=document.getElementById(id); navigator.clipboard.writeText(el.textContent).then(()=>toast('Copied.')); }
+function esc(s){ return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ---------- NAV ---------- */
+const VIEWS = [
+  ['dashboard','Dashboard'],['creators','Creators'],['brainrot','Brain Rot'],['story','Story'],
+  ['sing','Sing'],['copy','Copy Trend'],['library','Library'],['brands','Brands'],['trends','Trends'],
+  ['jobs','Jobs'],['settings','Settings']
+];
+function buildNav(){
+  const nav = document.getElementById('nav');
+  nav.innerHTML = VIEWS.map(([id,label])=>`<button data-v="${id}">${label}</button>`).join('');
+  nav.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>go(b.dataset.v)));
+}
+let currentView = 'dashboard';
+function go(id){
+  currentView = id;
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+id).classList.add('active');
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active', b.dataset.v===id));
+  renderAll();
+}
+
+/* ---------- CREATORS ---------- */
+let creatorGender = 'male';
+document.addEventListener('DOMContentLoaded', ()=>{
+  document.getElementById('creatorSubtabs').addEventListener('click', e=>{
+    if(e.target.dataset.g){ creatorGender=e.target.dataset.g;
+      document.querySelectorAll('#creatorSubtabs button').forEach(b=>b.classList.toggle('active', b.dataset.g===creatorGender));
+      renderCreators(); }
+  });
+  document.getElementById('libSubtabs').addEventListener('click', e=>{
+    if(e.target.dataset.l){ libTab=e.target.dataset.l;
+      document.querySelectorAll('#libSubtabs button').forEach(b=>b.classList.toggle('active', b.dataset.l===libTab));
+      renderLibrary(); }
+  });
+  buildNav(); go('dashboard');
+});
+
+const BODY_TYPES = {
+  male: ['Lean athletic','Muscular built','Average/casual','Tall slim','Stocky broad'],
+  female: ['Slim toned','Curvy hourglass','Athletic fit','Petite slim','Tall model-lean']
+};
+
+function renderCreators(){
+  const list = S.creators.filter(c=>c.gender===creatorGender);
+  document.getElementById('creatorCount').textContent = `${list.length} ${creatorGender} creator(s)`;
+  const grid = document.getElementById('creatorGrid');
+  if(!list.length){ grid.innerHTML = '<div class="empty">No creators yet. Click "+ New creator".</div>'; return; }
+  grid.innerHTML = list.map(c=>`
+    <div class="item">
+      <h4>${esc(c.name)} ${c.locked?'<span class="tag locked">🔒 locked</span>':'<span class="tag draft">draft</span>'}</h4>
+      <div class="muted">${esc(c.profession||'-')} · ${esc(c.niche||'-')}</div>
+      <div style="margin:6px 0;">
+        <span class="tag">${esc(c.bodyType||'-')}</span>
+        <span class="tag">${esc(c.ethnicity||'-')}</span>
+        <span class="tag">${esc(c.voiceName||'no voice set')}</span>
+      </div>
+      <div class="imgrow">${(c.faceRefs||[]).map(f=>`<img class="imgprev" src="${f}">`).join('')}</div>
+      <div class="row" style="margin-top:8px;">
+        <button class="btn small secondary" onclick="viewCreator('${c.id}')">Open</button>
+        ${!c.locked?`<button class="btn small green" onclick="confirmLock('${c.id}')">Confirm & lock</button>`:''}
+        <button class="btn small danger" onclick="deleteCreator('${c.id}')">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function deleteCreator(id){
+  if(!confirm('Delete this creator?')) return;
+  S.creators = S.creators.filter(c=>c.id!==id); save();
+}
+
+function confirmLock(id){
+  const c = S.creators.find(x=>x.id===id);
+  if(!c) return;
+  if(!c.voiceName){ toast('Set a voice before locking.'); return; }
+  c.locked = true; save(); toast('Creator locked — face, body, voice and confirmed outfits are now fixed.');
+}
+
+function viewCreator(id){
+  const c = S.creators.find(x=>x.id===id);
+  if(!c) return;
+  const prompt = buildCreatorPrompt(c);
+  const body = `
+    <h2>${esc(c.name)}</h2>
+    <div class="muted">${c.locked?'🔒 Locked — identity fields are fixed.':'Draft — not locked yet.'}</div>
+    <h3 style="margin-top:14px;">Identity prompt (paste into Claude/Higgsfield)</h3>
+    <pre class="prompt">${esc(prompt)}</pre>
+    <div class="row"><button class="btn secondary small" onclick="navigator.clipboard.writeText(\`${prompt.replace(/`/g,"'")}\`);toast('Copied.')">Copy</button></div>
+    <h3 style="margin-top:14px;">Assigned wardrobe</h3>
+    <div class="row">${(c.wardrobeIds||[]).map(wid=>{const w=S.wardrobe.find(x=>x.id===wid); return w?`<span class="tag">${esc(w.name)}</span>`:'';}).join('') || '<span class="muted">none yet — add from Library → Wardrobe</span>'}</div>
+    <h3 style="margin-top:14px;">Assigned backgrounds</h3>
+    <div class="row">${(c.backgroundIds||[]).map(bid=>{const b=S.backgrounds.find(x=>x.id===bid); return b?`<span class="tag">${esc(b.name)}</span>`:'';}).join('') || '<span class="muted">none yet</span>'}</div>
+  `;
+  openModalRaw('Creator: '+c.name, body);
+}
+
+function buildCreatorPrompt(c){
+  return `SOUL ID CREATOR SETUP
+Name: ${c.name}
+Gender: ${c.gender}
+Ethnicity: ${c.ethnicity}
+Body type: ${c.bodyType}
+Age range: ${c.age||'20s-30s'}
+Profession / persona: ${c.profession}
+Niche: ${c.niche}
+Face reference photos: ${(c.faceRefs||[]).length} attached (use for Soul ID training, real photorealistic likeness)
+Clothing description for base look: ${c.clothingDesc||'(none yet — see wardrobe items)'}
+Voice: ${c.voiceName || '(not set)'} — save as a locked Higgsfield Audio preset/clone for this creator, reuse on every video, never regenerate a new voice for them.
+Deliverables needed:
+1. Train/confirm Soul ID from the reference photos, 100% photorealistic.
+2. Generate 4 reference shots: far/full body, medium distance, close-up face, 3/4 side angle.
+3. Save the identity as a reusable character named "${c.name}" for reuse across all future generations.
+Do not alter face, body type, or voice after this is confirmed — this identity is locked once I approve it.`;
+}
+
+/* ---------- WIZARD ---------- */
+let wiz = null; let wizStep = 0;
+function openWizard(){
+  wiz = { name:'', gender:creatorGender, ethnicity:'', bodyType:'', age:'20s-30s', profession:'', niche:'',
+    faceRefs:[], clothingDesc:'', voiceMode:'preset', voiceName:'', wardrobeIds:[], backgroundIds:[] };
+  wizStep = 0; renderWizStep(); document.getElementById('wizardBg').classList.add('open');
+}
+function closeWizard(){ document.getElementById('wizardBg').classList.remove('open'); }
+function wizNav(dir){
+  if(dir>0 && wizStep===0 && !wiz.name.trim()){ toast('Give the creator a name.'); return; }
+  wizStep += dir;
+  if(wizStep<0){ closeWizard(); return; }
+  if(wizStep>4){ finishWizard(); return; }
+  renderWizStep();
+}
+function renderWizStep(){
+  document.querySelectorAll('#wizSteps div').forEach((d,i)=>d.classList.toggle('on', i<=wizStep));
+  document.getElementById('wizBack').textContent = wizStep===0?'Cancel':'Back';
+  document.getElementById('wizNext').textContent = wizStep===4?'Save creator':'Next';
+  const body = document.getElementById('wizBody');
+  const genderTabs = `
+    <div class="row" style="margin-bottom:8px;">
+      <label style="margin:0;">Tab:</label>
+      <select onchange="wiz.gender=this.value">
+        <option value="male" ${wiz.gender==='male'?'selected':''}>Male</option>
+        <option value="female" ${wiz.gender==='female'?'selected':''}>Female</option>
+      </select>
+    </div>`;
+  if(wizStep===0){
+    body.innerHTML = `
+      ${genderTabs}
+      <label>Name</label><input type="text" value="${esc(wiz.name)}" oninput="wiz.name=this.value">
+      <label>Profession / persona</label><input type="text" value="${esc(wiz.profession)}" oninput="wiz.profession=this.value" placeholder="e.g. fitness coach, finance bro, cooking mom">
+      <label>Niche / content angle</label><input type="text" value="${esc(wiz.niche)}" oninput="wiz.niche=this.value" placeholder="e.g. gym tips, budgeting hacks">
+      <label>Age range</label><input type="text" value="${esc(wiz.age)}" oninput="wiz.age=this.value">
+    `;
+  } else if(wizStep===1){
+    body.innerHTML = `
+      <label>Upload face reference photos (for Soul ID training)</label>
+      <input type="file" accept="image/*" multiple onchange="wizAddFaces(event)">
+      <div class="imgrow" id="wizFaceRow">${wiz.faceRefs.map((f,i)=>`<img class="imgprev" src="${f}">`).join('')}</div>
+      <p class="muted">These stay local in this browser. When you generate, attach the same photos in the Claude chat message so Higgsfield can train Soul ID from them.</p>
+    `;
+  } else if(wizStep===2){
+    body.innerHTML = `
+      <label>Ethnicity</label>
+      <select onchange="wiz.ethnicity=this.value">
+        <option value="">Select</option>
+        ${['Middle Eastern','South Asian','East Asian','Southeast Asian','Black/African','White/Caucasian','Latino/Hispanic','Mixed'].map(e=>`<option ${wiz.ethnicity===e?'selected':''}>${e}</option>`).join('')}
+      </select>
+      <label>Body type</label>
+      <select onchange="wiz.bodyType=this.value">
+        <option value="">Select</option>
+        ${(BODY_TYPES[wiz.gender]||BODY_TYPES.male).map(b=>`<option ${wiz.bodyType===b?'selected':''}>${b}</option>`).join('')}
+      </select>
+      <label>Base clothing description</label>
+      <textarea oninput="wiz.clothingDesc=this.value" placeholder="e.g. fitted black t-shirt, grey joggers, minimal jewelry">${esc(wiz.clothingDesc)}</textarea>
+      <p class="muted">Detailed outfits go in the Wardrobe library after the creator is saved — this is just the default look for the 4 turnaround shots.</p>
+    `;
+  } else if(wizStep===3){
+    body.innerHTML = `
+      <label>Voice source</label>
+      <select onchange="wiz.voiceMode=this.value; renderWizStep();">
+        <option value="preset" ${wiz.voiceMode==='preset'?'selected':''}>Higgsfield preset (Seed Audio)</option>
+        <option value="clone" ${wiz.voiceMode==='clone'?'selected':''}>Cloned voice (your own sample, rights-cleared)</option>
+      </select>
+      <label>Voice name / label</label>
+      <input type="text" value="${esc(wiz.voiceName)}" oninput="wiz.voiceName=this.value" placeholder="${wiz.voiceMode==='preset'?'e.g. Preset: Deep calm male':'e.g. Clone: my-sample-v1'}">
+      <p class="muted">This name is saved with the creator and reused on every video for them — never regenerated per video.</p>
+    `;
+  } else if(wizStep===4){
+    body.innerHTML = `
+      <h3>Review</h3>
+      <table>
+        <tr><th>Name</th><td>${esc(wiz.name)}</td></tr>
+        <tr><th>Tab</th><td>${wiz.gender}</td></tr>
+        <tr><th>Profession</th><td>${esc(wiz.profession)}</td></tr>
+        <tr><th>Niche</th><td>${esc(wiz.niche)}</td></tr>
+        <tr><th>Ethnicity</th><td>${esc(wiz.ethnicity)}</td></tr>
+        <tr><th>Body type</th><td>${esc(wiz.bodyType)}</td></tr>
+        <tr><th>Face refs</th><td>${wiz.faceRefs.length} photo(s)</td></tr>
+        <tr><th>Voice</th><td>${esc(wiz.voiceName)}</td></tr>
+      </table>
+      <p class="muted">Saved as draft first. Use "Confirm & lock" on the creator card once you're happy with the generated Soul ID — after that, face/body/voice/confirmed outfits can't be changed.</p>
+    `;
+  }
+}
+function wizAddFaces(ev){
+  const files = Array.from(ev.target.files||[]);
+  let done=0;
+  files.forEach(f=>{
+    const r = new FileReader();
+    r.onload = ()=>{ wiz.faceRefs.push(r.result); done++; if(done===files.length) renderWizStep(); };
+    r.readAsDataURL(f);
+  });
+}
+function finishWizard(){
+  const c = Object.assign({ locked:false, wardrobeIds:[], backgroundIds:[] }, wiz, { id: nid('cr') });
+  S.creators.push(c); closeWizard(); save(); go('creators'); creatorGender = c.gender;
+  document.querySelectorAll('#creatorSubtabs button').forEach(b=>b.classList.toggle('active', b.dataset.g===creatorGender));
+  renderCreators();
+  toast('Creator saved as draft.');
+}
+
+/* generic modal for viewing details */
+function openModalRaw(title, html){
+  document.getElementById('wizTitle').textContent = title;
+  document.getElementById('wizSteps').style.display='none';
+  document.getElementById('wizBody').innerHTML = html;
+  document.getElementById('wizNext').style.display='none';
+  document.getElementById('wizBack').textContent='Close';
+  document.getElementById('wizBack').onclick = ()=>{ closeWizard(); document.getElementById('wizSteps').style.display='flex'; document.getElementById('wizNext').style.display='inline-block'; document.getElementById('wizBack').onclick=()=>wizNav(-1); document.getElementById('wizBack').textContent='Back'; };
+  document.getElementById('wizardBg').classList.add('open');
+}
+
+/* ---------- LIBRARY (wardrobe / backgrounds / accessories) ---------- */
+let libTab = 'wardrobe';
+function renderLibrary(){
+  const pane = document.getElementById('libPane');
+  const cfg = {
+    wardrobe:{ label:'Wardrobe item', items:S.wardrobe },
+    backgrounds:{ label:'Background', items:S.backgrounds },
+    accessories:{ label:'Accessory', items:S.accessories }
+  }[libTab];
+  pane.innerHTML = `
+    <div class="card">
+      <h2>New ${cfg.label.toLowerCase()}</h2>
+      <div class="row">
+        <div style="flex:1;min-width:160px;"><label>Name</label><input type="text" id="lib_name"></div>
+        <div style="flex:2;min-width:220px;"><label>Description</label><input type="text" id="lib_desc" placeholder="details, colors, materials..."></div>
+        ${libTab==='accessories'?`<div style="flex:1;min-width:160px;"><label>Brand (optional)</label><select id="lib_brand">${brandOptions()}</select></div>`:''}
+      </div>
+      <label>Reference photo (optional)</label>
+      <input type="file" accept="image/*" id="lib_img">
+      <button class="btn" style="margin-top:8px;" onclick="addLibItem()">Add & generate prompt</button>
+    </div>
+    <div class="grid" id="libGrid"></div>
+  `;
+  const grid = document.getElementById('libGrid');
+  if(!cfg.items.length){ grid.innerHTML = '<div class="empty">Nothing here yet.</div>'; return; }
+  grid.innerHTML = cfg.items.map(it=>`
+    <div class="item">
+      <h4>${esc(it.name)} ${it.confirmed?'<span class="tag done">saved</span>':'<span class="tag draft">draft</span>'}</h4>
+      <div class="muted">${esc(it.desc||'')}</div>
+      ${it.img?`<div class="imgrow"><img class="imgprev" src="${it.img}"></div>`:''}
+      ${it.brandId?`<span class="tag">${esc((S.brands.find(b=>b.id===it.brandId)||{}).name||'')}</span>`:''}
+      <div class="row" style="margin-top:8px;">
+        <button class="btn small secondary" onclick="showLibPrompt('${libTab}','${it.id}')">Prompt</button>
+        ${!it.confirmed?`<button class="btn small green" onclick="confirmLib('${libTab}','${it.id}')">Mark saved</button>`:''}
+        <button class="btn small danger" onclick="deleteLib('${libTab}','${it.id}')">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+function brandOptions(){
+  return '<option value="">None</option>' + S.brands.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('');
+}
+function addLibItem(){
+  const name = document.getElementById('lib_name').value.trim();
+  const desc = document.getElementById('lib_desc').value.trim();
+  if(!name){ toast('Name it first.'); return; }
+  const brandId = libTab==='accessories' ? document.getElementById('lib_brand').value : '';
+  const fileInput = document.getElementById('lib_img');
+  const arrKey = libTab;
+  const push = (img)=>{
+    S[arrKey].push({ id: nid(libTab[0]), name, desc, brandId, img: img||null, confirmed:false });
+    save(); renderLibrary(); toast('Added as draft.');
+  };
+  if(fileInput.files && fileInput.files[0]){
+    const r = new FileReader(); r.onload=()=>push(r.result); r.readAsDataURL(fileInput.files[0]);
+  } else push(null);
+}
+function confirmLib(tab,id){
+  const it = S[tab].find(x=>x.id===id); if(!it) return;
+  it.confirmed = true; save(); renderLibrary(); toast('Saved to '+tab+'.');
+}
+function deleteLib(tab,id){
+  if(!confirm('Delete this item?')) return;
+  S[tab] = S[tab].filter(x=>x.id!==id); save(); renderLibrary();
+}
+function showLibPrompt(tab,id){
+  const it = S[tab].find(x=>x.id===id); if(!it) return;
+  const kind = {wardrobe:'clothing outfit', backgrounds:'background/environment', accessories:'accessory prop'}[tab];
+  const brand = it.brandId ? S.brands.find(b=>b.id===it.brandId) : null;
+  const prompt = `Generate a ${kind} asset named "${it.name}".
+Description: ${it.desc||'(see reference photo)'}
+${it.img?'Reference photo attached — match its style/fit closely, adapt for realism.':'No reference photo — use the description only.'}
+${brand?`Brand promo: ${brand.name} — ${brand.notes||''}`:''}
+Once generated, save this as a reusable asset named "${it.name}" in the ${tab} library so it can be applied to any locked creator without regenerating it.`;
+  openModalRaw(it.name, `<pre class="prompt">${esc(prompt)}</pre><div class="row"><button class="btn secondary small" onclick="navigator.clipboard.writeText(\`${prompt.replace(/`/g,"'")}\`);toast('Copied.')">Copy</button></div>`);
+}
+
+/* ---------- BRANDS ---------- */
+function addBrand(){
+  const name = document.getElementById('brand_name').value.trim();
+  const notes = document.getElementById('brand_notes').value.trim();
+  if(!name){ toast('Brand name required.'); return; }
+  S.brands.push({ id: nid('b'), name, notes });
+  document.getElementById('brand_name').value=''; document.getElementById('brand_notes').value='';
+  save();
+}
+function renderBrands(){
+  const list = document.getElementById('brandList');
+  if(!S.brands.length){ list.innerHTML='<div class="empty">No brands yet.</div>'; return; }
+  list.innerHTML = `<table><tr><th>Brand</th><th>Notes</th><th></th></tr>` +
+    S.brands.map(b=>`<tr><td>${esc(b.name)}</td><td>${esc(b.notes||'')}</td><td><button class="btn small danger" onclick="deleteBrand('${b.id}')">Delete</button></td></tr>`).join('') + `</table>`;
+}
+function deleteBrand(id){
+  if(!confirm('Delete this brand?')) return;
+  S.brands = S.brands.filter(b=>b.id!==id); save();
+}
+
+/* ---------- TRENDS ---------- */
+function addTrend(){
+  const platform = document.getElementById('tr_platform').value;
+  const topic = document.getElementById('tr_topic').value.trim();
+  const note = document.getElementById('tr_note').value.trim();
+  if(!topic){ toast('Describe the trend.'); return; }
+  S.trends.unshift({ id: nid('t'), platform, topic, note, date: new Date().toISOString().slice(0,10) });
+  document.getElementById('tr_topic').value=''; document.getElementById('tr_note').value='';
+  save();
+}
+function renderTrends(){
+  const list = document.getElementById('trendList');
+  if(!S.trends.length){ list.innerHTML='<div class="empty">No trends logged yet. Ask me in chat what is trending and log the useful ones here.</div>'; return; }
+  list.innerHTML = `<table><tr><th>Date</th><th>Platform</th><th>Trend</th><th>Note</th><th></th></tr>` +
+    S.trends.map(t=>`<tr><td>${t.date}</td><td>${esc(t.platform)}</td><td>${esc(t.topic)}</td><td>${esc(t.note)}</td><td><button class="btn small danger" onclick="deleteTrend('${t.id}')">Del</button></td></tr>`).join('') + `</table>`;
+}
+function deleteTrend(id){ S.trends = S.trends.filter(t=>t.id!==id); save(); }
+
+/* ---------- CREATOR SELECT helpers ---------- */
+function allCreatorOptions(sel){
+  return '<option value="">Select a creator</option>' + S.creators.map(c=>`<option value="${c.id}" ${sel===c.id?'selected':''}>${esc(c.name)} (${c.gender}${c.locked?', locked':''})</option>`).join('');
+}
+function brandSelectOptions(){ return brandOptions(); }
+
+/* ---------- BRAIN ROT / STORY JOBS ---------- */
+function createVideoJob(kind){
+  const promptEl = document.getElementById(kind==='brainrot'?'br_prompt':'st_prompt');
+  const styleEl = document.getElementById(kind==='brainrot'?'br_style':'st_style');
+  const brandEl = document.getElementById(kind==='brainrot'?'br_brand':'st_brand');
+  const audioEl = document.getElementById(kind==='brainrot'?'br_audio':'st_audio');
+  const userPrompt = promptEl.value.trim();
+  if(!userPrompt){ toast('Add a prompt/concept first.'); return; }
+  const brand = brandEl.value ? S.brands.find(b=>b.id===brandEl.value) : null;
+  const audio = audioEl.value.trim();
+  const full = `${kind.toUpperCase()} SHORT
+Concept: ${userPrompt}
+Style: ${styleEl.value}
+${brand?`Brand promo: ${brand.name} — ${brand.notes||''}`:'No brand promo.'}
+Audio: ${audio ? `Reuse this exact trending audio, do not replace it: ${audio}. Time cuts and any lip-sync to this track's beat/lyrics.` : 'Generate a fitting new audio/voiceover for this concept.'}
+Instructions: plan the shot list and script yourself, then generate stills and animate them in Higgsfield (image generation first, then reference + animate). No fixed creator identity is required for ${kind==='brainrot'?'brain rot':'story'} mode unless I name one — ask if unsure.
+Output as a vertical 9:16 short ready for TikTok/Reels/Shorts.`;
+  const job = { id: nid('j'), type: kind, prompt: full, status:'draft', credits:0, note:'', createdAt: new Date().toISOString().slice(0,16).replace('T',' ') };
+  S.jobs.unshift(job); promptEl.value=''; audioEl.value=''; save();
+  toast('Prompt built — see it in Jobs, or below.');
+  renderKindJobs(kind);
+}
+function renderKindJobs(kind){
+  const el = document.getElementById(kind==='brainrot'?'brainrotJobs':'storyJobs');
+  const jobs = S.jobs.filter(j=>j.type===kind);
+  if(!jobs.length){ el.innerHTML = '<div class="empty">None yet.</div>'; return; }
+  el.innerHTML = jobs.map(j=>jobRow(j)).join('');
+}
+
+/* ---------- SING / LIPSYNC ---------- */
+let sgAudioMeta = null; // { name, duration } — metadata only, the file itself is never persisted
+function sgToggleSource(){
+  const src = document.querySelector('input[name="sg_source"]:checked').value;
+  document.getElementById('sg_uploadWrap').style.display = src==='upload' ? 'block' : 'none';
+  document.getElementById('sg_trendWrap').style.display = src==='trend' ? 'block' : 'none';
+}
+function sgAudioPicked(ev){
+  const file = ev.target.files[0];
+  const info = document.getElementById('sg_fileInfo');
+  if(!file){ sgAudioMeta = null; info.textContent = 'No file selected.'; return; }
+  const url = URL.createObjectURL(file);
+  const a = new Audio();
+  a.preload = 'metadata';
+  a.onloadedmetadata = ()=>{
+    const dur = isFinite(a.duration) ? Math.round(a.duration) + 's' : 'unknown length';
+    sgAudioMeta = { name: file.name, duration: dur };
+    info.textContent = `${file.name} (${dur}) — attach this same file in the Claude chat when you paste the prompt.`;
+    URL.revokeObjectURL(url);
+  };
+  a.onerror = ()=>{
+    sgAudioMeta = { name: file.name, duration: 'unknown length' };
+    info.textContent = `${file.name} — attach this same file in the Claude chat when you paste the prompt.`;
+  };
+  a.src = url;
+}
+function createSingJob(){
+  const creatorId = document.getElementById('sg_creator').value;
+  const creator = S.creators.find(c=>c.id===creatorId);
+  if(!creator){ toast('Pick a creator first.'); return; }
+  const source = document.querySelector('input[name="sg_source"]:checked').value;
+  const style = document.getElementById('sg_style').value;
+  const brandEl = document.getElementById('sg_brand');
+  const brand = brandEl.value ? S.brands.find(b=>b.id===brandEl.value) : null;
+  const notes = document.getElementById('sg_notes').value.trim();
+  let audioLine;
+  if(source==='upload'){
+    if(!sgAudioMeta){ toast('Upload the audio file first.'); return; }
+    audioLine = `Uploaded audio file: "${sgAudioMeta.name}" (${sgAudioMeta.duration}). Attach this exact file in the chat message — it is not stored by this tool.`;
+  } else {
+    const trend = document.getElementById('sg_trendAudio').value.trim();
+    if(!trend){ toast('Enter the trending sound name/link.'); return; }
+    audioLine = `Trending sound reference: ${trend}. Use this exact original audio track, do not regenerate or replace it.`;
+  }
+  const full = `LIP-SYNC / PERFORMANCE VIDEO
+Creator: ${creator.name} (${creator.locked?'locked identity — do not change face/body':'not locked yet — lock before generating for best consistency'}). Their own saved voice ("${creator.voiceName||'none set'}") is NOT used in this video.
+Audio: ${audioLine}
+Performance style: ${style}
+${brand?`Brand promo: ${brand.name} — ${brand.notes||''}`:'No brand promo.'}
+Notes: ${notes||'none'}
+Instructions: the character lip-syncs and performs/acts to the audio above via Higgsfield Lipsync Studio (or a native audio+video pipeline) — sync mouth movement, expression and body movement to the beat/lyrics. Do not generate new vocals or swap in a different track. Output as a vertical 9:16 clip.`;
+  const job = { id: nid('j'), type:'sing', prompt: full, status:'draft', credits:0, note:'', createdAt: new Date().toISOString().slice(0,16).replace('T',' ') };
+  S.jobs.unshift(job);
+  document.getElementById('sg_notes').value=''; document.getElementById('sg_trendAudio').value='';
+  document.getElementById('sg_file').value=''; sgAudioMeta=null;
+  document.getElementById('sg_fileInfo').textContent = 'No file selected. The file itself isn’t stored here — attach the same file when you paste this prompt into the Claude chat.';
+  save();
+  toast('Prompt built — see it in Jobs, or below.');
+  renderKindJobs('sing');
+}
+
+/* ---------- COPY TREND ---------- */
+function buildCopyPrompt(){
+  const url = document.getElementById('copy_url').value.trim();
+  const creatorId = document.getElementById('copy_creator').value;
+  const notes = document.getElementById('copy_notes').value.trim();
+  const sameAudio = document.getElementById('copy_sameaudio').checked;
+  if(!url){ toast('Paste the video link.'); return; }
+  const creator = S.creators.find(c=>c.id===creatorId);
+  const prompt = `RECREATE TREND
+Source video: ${url}
+Steps for you (Claude): download/open the link if possible, analyse the hook, pacing, shot list and audio; if you can't fetch it directly, ask me to paste the video file or a transcript.
+Recreate the same format and beats using creator: ${creator?creator.name+' (locked identity, do not change face/body/voice)':'(no creator selected — ask which one)'}.
+Audio: ${sameAudio ? "Use the exact original audio track from the source video, unchanged. The creator lip-syncs and acts to it — do not write new dialogue or generate new vocals, and do not use the creator's own saved voice for this one." : "Write new dialogue/voiceover in the creator's own saved voice, matching the original's pacing."}
+Changes requested: ${notes||'none — match the original as closely as format allows.'}
+Generate via Higgsfield: use the original as a motion/style reference, apply the creator's Soul ID${sameAudio?'':' and locked voice'}, produce a 9:16 vertical clip.`;
+  const out = document.getElementById('copy_out');
+  out.style.display='block'; out.textContent = prompt;
+  document.getElementById('copy_actions').style.display='flex';
+}
+function queueFromPre(preId, kind){
+  const text = document.getElementById(preId).textContent;
+  const job = { id: nid('j'), type: kind, prompt: text, status:'draft', credits:0, note:'', createdAt: new Date().toISOString().slice(0,16).replace('T',' ') };
+  S.jobs.unshift(job); save(); toast('Queued in Jobs.');
+}
+
+/* ---------- JOBS TABLE ---------- */
+function jobRow(j){
+  return `<div class="item" style="margin-bottom:8px;">
+    <div class="row" style="justify-content:space-between;">
+      <div><span class="tag">${esc(j.type)}</span> <span class="tag ${j.status==='done'?'done':'draft'}">${esc(j.status)}</span> <span class="muted">${j.createdAt}</span></div>
+      <div class="row">
+        <button class="btn small secondary" onclick="copyJobPrompt('${j.id}')">Copy prompt</button>
+        ${j.status!=='done'?`<button class="btn small green" onclick="markJobDone('${j.id}')">Mark done</button>`:''}
+        <button class="btn small danger" onclick="deleteJob('${j.id}')">Delete</button>
+      </div>
+    </div>
+    <pre class="prompt" style="margin-top:6px;">${esc(j.prompt)}</pre>
+    ${j.note?`<div class="muted">Result: ${esc(j.note)}</div>`:''}
+  </div>`;
+}
+function copyJobPrompt(id){ const j=S.jobs.find(x=>x.id===id); navigator.clipboard.writeText(j.prompt).then(()=>toast('Copied.')); }
+function deleteJob(id){ S.jobs = S.jobs.filter(j=>j.id!==id); save(); }
+function markJobDone(id){
+  const j = S.jobs.find(x=>x.id===id); if(!j) return;
+  const credits = parseFloat(prompt('Credits this used?', '0')) || 0;
+  const note = prompt('Where did it land? (Drive link / filename)', '') || '';
+  j.status='done'; j.credits=credits; j.note=note;
+  S.settings.creditLog.unshift({ date:new Date().toISOString().slice(0,10), amount:credits, note:'Job: '+j.type+(note?' — '+note:'') });
+  save();
+}
+function renderJobsTable(){
+  const el = document.getElementById('jobsTable');
+  if(!S.jobs.length){ el.innerHTML='<div class="empty">No jobs yet.</div>'; return; }
+  el.innerHTML = S.jobs.map(jobRow).join('');
+}
+
+/* ---------- SETTINGS / CREDITS ---------- */
+function saveSettings(){
+  S.settings.plan = document.getElementById('set_plan').value;
+  S.settings.allowance = parseFloat(document.getElementById('set_allowance').value)||0;
+  S.settings.budget = parseFloat(document.getElementById('set_budget').value)||0;
+  save(); toast('Settings saved.');
+}
+function manualCreditLog(){
+  const amt = parseFloat(document.getElementById('manual_credit').value)||0;
+  const note = document.getElementById('manual_note').value.trim();
+  if(!amt){ toast('Enter a credit amount.'); return; }
+  S.settings.creditLog.unshift({ date:new Date().toISOString().slice(0,10), amount:amt, note: note||'manual entry' });
+  document.getElementById('manual_credit').value=''; document.getElementById('manual_note').value='';
+  save();
+}
+function creditsUsedThisMonth(){
+  const ym = new Date().toISOString().slice(0,7);
+  return S.settings.creditLog.filter(l=>l.date.startsWith(ym)).reduce((a,l)=>a+l.amount,0);
+}
+function renderSettings(){
+  document.getElementById('set_plan').value = S.settings.plan;
+  document.getElementById('set_allowance').value = S.settings.allowance;
+  document.getElementById('set_budget').value = S.settings.budget;
+  const el = document.getElementById('creditLogTable');
+  if(!S.settings.creditLog.length){ el.innerHTML = '<div class="empty">No usage logged yet.</div>'; return; }
+  el.innerHTML = `<table><tr><th>Date</th><th>Credits</th><th>Note</th></tr>` +
+    S.settings.creditLog.slice(0,50).map(l=>`<tr><td>${l.date}</td><td>${l.amount}</td><td>${esc(l.note)}</td></tr>`).join('') + `</table>`;
+}
+function exportData(){
+  const json = JSON.stringify(S,null,2);
+  const a = document.createElement('a');
+  try{
+    const blob = new Blob([json], {type:'application/json'});
+    a.href = URL.createObjectURL(blob);
+  }catch(e){
+    a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(json);
+  }
+  a.download = 'creator-studio-backup.json'; a.click();
+}
+function importData(ev){
+  const file = ev.target.files[0]; if(!file) return;
+  const r = new FileReader();
+  r.onload = ()=>{
+    try{ S = JSON.parse(r.result); save(); toast('Imported.'); }
+    catch(e){ toast('Invalid backup file.'); }
+  };
+  r.readAsText(file);
+}
+function resetAll(){
+  if(!confirm('This erases all creators, wardrobe, jobs and settings in this browser. Export a backup first. Continue?')) return;
+  S = JSON.parse(JSON.stringify(DEFAULT_STATE)); save(); toast('All data erased.');
+}
+
+/* ---------- DASHBOARD ---------- */
+function renderDashboard(){
+  const stats = [
+    ['Male creators', S.creators.filter(c=>c.gender==='male').length],
+    ['Female creators', S.creators.filter(c=>c.gender==='female').length],
+    ['Locked identities', S.creators.filter(c=>c.locked).length],
+    ['Wardrobe items', S.wardrobe.length],
+    ['Backgrounds', S.backgrounds.length],
+    ['Accessories', S.accessories.length],
+    ['Brands', S.brands.length],
+    ['Open jobs', S.jobs.filter(j=>j.status!=='done').length],
+  ];
+  document.getElementById('dashStats').innerHTML = stats.map(([l,v])=>`<div class="item"><h4>${v}</h4><div class="muted">${l}</div></div>`).join('');
+  const recent = S.jobs.slice(0,5);
+  document.getElementById('dashJobs').innerHTML = recent.length ? recent.map(jobRow).join('') : '<div class="empty">No jobs yet.</div>';
+}
+
+/* ---------- CREDIT PILL ---------- */
+function renderCreditPill(){
+  const used = creditsUsedThisMonth();
+  const allow = S.settings.allowance || 0;
+  document.getElementById('creditPill').textContent = allow
+    ? `credits: ${used}/${allow} this month`
+    : `credits used: ${used}`;
+}
+
+/* ---------- RENDER ALL ---------- */
+function renderAll(){
+  renderCreditPill();
+  if(currentView==='dashboard') renderDashboard();
+  if(currentView==='creators') renderCreators();
+  if(currentView==='library') renderLibrary();
+  if(currentView==='brands') renderBrands();
+  if(currentView==='trends') renderTrends();
+  if(currentView==='jobs') renderJobsTable();
+  if(currentView==='settings') renderSettings();
+  if(currentView==='brainrot'){ document.getElementById('br_brand').innerHTML = brandSelectOptions(); renderKindJobs('brainrot'); }
+  if(currentView==='story'){ document.getElementById('st_brand').innerHTML = brandSelectOptions(); renderKindJobs('story'); }
+  if(currentView==='sing'){ document.getElementById('sg_creator').innerHTML = allCreatorOptions(); document.getElementById('sg_brand').innerHTML = brandSelectOptions(); renderKindJobs('sing'); }
+  if(currentView==='copy'){ document.getElementById('copy_creator').innerHTML = allCreatorOptions(); }
+}
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+}
+</script>
+</body>
+</html>
