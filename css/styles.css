@@ -4,9 +4,11 @@
   --green:#3aa76d; --warn:#d99a3a; --danger:#d9534f; --locked:#7c5cd1;
   --radius:10px;
 }
-*{box-sizing:border-box;}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html{-webkit-text-size-adjust:100%;}
-body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.45;}
+html,body{overscroll-behavior-y:contain;}
+body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.45;padding-top:env(safe-area-inset-top);}
+button,.btn,.chip,.pick,.fmt-tile,.nav-bottom a{touch-action:manipulation;}
 a{color:var(--accent);text-decoration:none;}
 h1,h2,h3,h4{margin:0;}
 h1{font-size:22px;}
@@ -16,7 +18,7 @@ small{font-size:12px;}
 .muted{color:var(--muted);font-size:12.5px;}
 
 /* ---------- top bar & nav ---------- */
-.topbar{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20;}
+.topbar{display:flex;align-items:center;gap:14px;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20;}
 .brand{color:var(--text);font-weight:600;font-size:15px;white-space:nowrap;}
 .nav-top{display:flex;gap:2px;flex:1;overflow-x:auto;scrollbar-width:none;}
 .nav-top a{color:var(--muted);padding:6px 10px;border-radius:7px;font-size:13px;white-space:nowrap;}
@@ -194,6 +196,12 @@ body.modal-open{overflow:hidden;}
   .nav-bottom a.active span.ic{filter:none;}
   .nav-bottom a.main-cta span.ic{background:var(--accent);border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;margin-top:-14px;color:#fff;box-shadow:0 4px 14px rgba(91,141,239,.5);}
   .toast{bottom:80px;}
+  /* 16px inputs stop iOS Safari zooming the page on focus; 40px+ tap targets */
+  input[type=text],input[type=number],input[type=url],input[type=date],select,textarea{font-size:16px;}
+  .btn{min-height:40px;}
+  .btn.small{min-height:34px;}
+  .nav-bottom a{min-height:52px;justify-content:center;}
+  .modal-foot{padding-bottom:calc(12px + env(safe-area-inset-bottom));}
   .fmt-tiles{display:flex;overflow-x:auto;scroll-snap-type:x proximity;margin-left:-12px;margin-right:-12px;padding:0 12px 4px;scrollbar-width:none;}
   .fmt-tile{flex:0 0 150px;scroll-snap-align:start;}
   .hero .fmt-tiles{margin-left:-4px;margin-right:-4px;padding:0 4px 4px;}
