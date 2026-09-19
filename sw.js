@@ -1,4 +1,5 @@
 // Network-first for the app's own files so updates show up right away; the cache is only the offline fallback.
+// cache:'no-cache' makes the browser re-check with the server instead of trusting its own ~10 minute HTTP cache.
 const CACHE = 'creator-studio-v3';
 const FILES = [
   './', './index.html', './manifest.json', './icon-192.png', './icon-512.png',
@@ -20,7 +21,7 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET' || new URL(e.request.url).origin !== location.origin) return;
   e.respondWith(
-    fetch(e.request).then(res => {
+    fetch(e.request, { cache: 'no-cache' }).then(res => {
       if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
       return res;
     }).catch(() => caches.match(e.request))
