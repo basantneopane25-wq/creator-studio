@@ -53,7 +53,8 @@ window.CS = { S: null, actions: {}, binds: {}, views: {}, ui: {} };
       v: VERSION, seq: 1, lastFormat: 'ugc',
       creators: [], wardrobe: [], backgrounds: [], accessories: [], brands: [], trends: [], jobs: [],
       drafts: {},
-      settings: { plan: 'Not subscribed yet', allowance: 1000, budget: 50, creditLog: [], imagegen: { provider: 'free', baseUrl: 'https://api.openai.com/v1', model: 'gpt-image-1', apiKey: '' } }
+      settings: { plan: 'Not subscribed yet', allowance: 1000, budget: 50, creditLog: [], imagegen: { provider: 'free', baseUrl: 'https://api.openai.com/v1', model: 'gpt-image-1', apiKey: '' },
+        higgs: { mode: 'off', keyId: '', keySecret: '', proxyUrl: '', proxyToken: '', ack: false, caps: { perJob: 3, daily: 10, monthly: 50 }, autoBelowUsd: 0.1, maxParallel: 3, disclose: true } }
     };
   }
 
@@ -62,6 +63,7 @@ window.CS = { S: null, actions: {}, binds: {}, views: {}, ui: {} };
     const s = Object.assign(defaults(), raw && typeof raw === 'object' ? raw : {});
     s.settings = Object.assign(defaults().settings, s.settings || {});
     s.settings.imagegen = Object.assign(defaults().settings.imagegen, s.settings.imagegen || {});
+    const hd = defaults().settings.higgs; s.settings.higgs = Object.assign(hd, s.settings.higgs || {}); s.settings.higgs.caps = Object.assign({ perJob: 3, daily: 10, monthly: 50 }, (s.settings.higgs || {}).caps || {});
     ['creators', 'wardrobe', 'backgrounds', 'accessories', 'brands', 'trends', 'jobs'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
     if (!Array.isArray(s.settings.creditLog)) s.settings.creditLog = [];
     if (!s.drafts || typeof s.drafts !== 'object') s.drafts = {};
@@ -158,6 +160,7 @@ window.CS = { S: null, actions: {}, binds: {}, views: {}, ui: {} };
     { id: 'library', label: 'Library', icon: '👗' },
     { id: 'brands', label: 'Brands', icon: '🏷️' },
     { id: 'trends', label: 'Trends', icon: '🔥' },
+    { id: 'playbook', label: 'Playbook', icon: '📘' },
     { id: 'settings', label: 'Settings', icon: '⚙️' }
   ];
 
@@ -173,16 +176,18 @@ window.CS = { S: null, actions: {}, binds: {}, views: {}, ui: {} };
   };
 
   CS.render = () => {
-    const r = CS.route();
+    const r = CS.route(), on = r.id === 'produce' ? 'queue' : r.id; // a production belongs under Queue in the menu
     const v = CS.views[r.id];
     document.getElementById('app').innerHTML = v.render(r.params);
-    document.getElementById('nav').innerHTML = CS.routes.map(x => `<a href="#/${x.id}" class="${x.id === r.id ? 'active' : ''}">${x.label}</a>`).join('');
+    document.getElementById('nav').innerHTML = CS.routes.map(x => `<a href="#/${x.id}" class="${x.id === on ? 'active' : ''}">${x.label}</a>`).join('');
     document.getElementById('navBottom').innerHTML = CS.routes
 
-      .map(x => `<a href="#/${x.id}" class="${x.id === r.id ? 'active' : ''} ${x.cta ? 'main-cta' : ''}"><span class="ic">${x.icon}</span>${x.label}</a>`).join('');
-    document.title = (r.id === 'home' ? '' : CS.routes.find(x => x.id === r.id).label + ' · ') + 'Creator Studio';
+      .map(x => `<a href="#/${x.id}" class="${x.id === on ? 'active' : ''} ${x.cta ? 'main-cta' : ''}"><span class="ic">${x.icon}</span>${x.label}</a>`).join('');
+    const route = CS.routes.find(x => x.id === r.id); // screens like "produce" aren't in the menu
+    document.title = (r.id === 'home' ? '' : (route ? route.label : r.id.charAt(0).toUpperCase() + r.id.slice(1)) + ' · ') + 'Creator Studio';
     const used = CS.creditsUsed(), allow = CS.S.settings.allowance || 0;
-    document.getElementById('creditPill').textContent = allow ? `credits ${used}/${allow}` : `credits used ${used}`;
+    const hg = CS.S.settings.higgs;
+    document.getElementById('creditPill').textContent = hg && hg.mode !== 'off' && CS.produce ? '$' + CS.produce.budget.spentSince(new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime()).toFixed(2) + ' this month' : (allow ? `credits ${used}/${allow}` : `credits used ${used}`);
     if (v.after) v.after(r.params);
   };
 })(window.CS);

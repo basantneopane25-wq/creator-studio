@@ -56,6 +56,17 @@
     }
   }
 
+  // Budget discipline for the Claude + Higgsfield route. (The Higgsfield connector has no spending cap of its own.)
+  const BUDGET = 'Budget rules: before EVERY generation tell me the model and its credit cost and wait for my OK; draft with the cheapest suitable model at the lowest resolution first and only make a higher-quality version of the take I approve; stop and ask after 2 failed attempts on the same step. Do not spend more than I approve.';
+  // Shot list in Kling 3.0 syntax: scene first, then [Character A: Name, voice tone]: "line" (about 2.5 spoken words per second)
+  function shotList(fid, d, c) {
+    const R = window.CSRecipes; if (!R) return '';
+    const cx = Object.assign({}, c, { concept: d.concept, product: d.product, cta: d.cta });
+    const beats = d.beats && d.beats.length ? d.beats : R.defaultBeats(fid, cx, parseInt(d.duration, 10) || 15);
+    return 'Shot list (one Kling 3.0 multi-shot clip, max 15s total):\n' + beats.map((b, i) => `  ${i + 1}. (${b.secs}s) ${R.klingShot(b, cx)}`).join('\n');
+  }
+  const kling = 'Method: 1) make 2 starting stills of the creator (use their saved Soul character so the face matches; vertical 9:16); wait for my pick. 2) animate the picked still with Kling 3.0 image-to-video (sound on, multi-shot as listed). In image-to-video describe how the scene evolves, do not re-describe how the person looks.';
+
   const join = arr => arr.filter(Boolean).join('\n');
 
   /* ---------- formats ---------- */
@@ -84,7 +95,7 @@
         `Angle: ${d.concept}`,
         d.cta && `Call to action: ${d.cta}`,
         styleLine(d), hookLine(d), audioBlock(d), notesLine(d),
-        'Instructions: plan the script yourself with this structure — hook (0–2s), problem/pitch, proof/demo, call to action. Then generate stills and animate them in Higgsfield (image generation first, then reference + animate). Keep it honest and native-feeling, not a polished commercial.',
+        shotList('ugc', d, c), kling + ' Keep it honest and native-feeling, not a polished commercial.', BUDGET,
         outLine(d)
       ])
     },
@@ -110,7 +121,7 @@
         `Concept: ${d.concept}`,
         castBlock(d, c), lookBlock(c), brandBlock(c),
         styleLine(d), hookLine(d), audioBlock(d), notesLine(d),
-        `Instructions: plan the shot list and script yourself, then generate stills and animate them in Higgsfield (image generation first, then reference + animate). ${c.creator ? 'Use the creator above as the on-screen character.' : 'No fixed creator identity is required unless I name one — ask if unsure.'}`,
+        shotList('story', d, c), kling + (d.loop ? ' Make it loop: end the clip on its first frame (use the start frame as the last frame).' : ''), BUDGET,
         outLine(d)
       ])
     },
@@ -136,7 +147,7 @@
         `Concept: ${d.concept}`,
         castBlock(d, c), lookBlock(c), brandBlock(c),
         styleLine(d), hookLine(d), audioBlock(d), notesLine(d),
-        `Instructions: plan the shot list and script yourself, then generate stills and animate them in Higgsfield (image generation first, then reference + animate). ${c.creator ? 'Use the creator above where it fits.' : 'No fixed creator identity is required unless I name one — ask if unsure.'}`,
+        shotList('brainrot', d, c), 'Method: make a still (the cheapest good image model is fine — no fixed face needed unless a creator is set), then animate it with Kling 3.0 image-to-video, 6-8 seconds, fast cuts.' + (d.loop ? ' Make it loop: end on the first frame.' : ''), BUDGET,
         outLine(d)
       ])
     },
@@ -164,7 +175,7 @@
         d.concept && `Scene / vibe: ${d.concept}`,
         audioBlock(d),
         `Performance style: ${cleanStyle(d)}`, hookLine(d), notesLine(d, 'Notes'),
-        'Instructions: the character lip-syncs and performs/acts to the audio above via Higgsfield Lipsync Studio (or a native audio + video pipeline) — sync mouth movement, expression and body movement to the beat/lyrics. Do not generate new vocals or swap in a different track.',
+        'Method: use Higgsfield Lipsync Studio (or Seedance 2.0 reference-to-video with the creator photos as image references and this audio as Audio 1 — audio needs a visual reference and at most 15s). The character lip-syncs and performs to the audio; do not generate new vocals or swap the track. Draft at the lowest resolution first.', BUDGET,
         outLine(d)
       ])
     },
@@ -213,7 +224,7 @@
         castBlock(d, c, true), lookBlock(c), brandBlock(c),
         `Scene: ${d.concept}`,
         styleLine(d), notesLine(d),
-        `Instructions: generate ${d.count} photorealistic still image${d.count === '1' ? '' : 's'} in Higgsfield using the creator's Soul ID, so the face and body match every other post. Natural skin texture, no text or watermarks. Aspect ratio ${d.aspect}. Then save the result${d.count === '1' ? '' : 's'} to the creator's library.`
+        `Method: generate ${d.count} photorealistic still image${d.count === '1' ? '' : 's'} with the creator's saved Soul character so face and body match every other post (a cheap fast image model such as Nano Banana Pro is fine for drafts). Natural skin texture, no text or watermarks. Aspect ratio ${d.aspect}. Show me the results before making any more.`, BUDGET,
       ])
     },
 
@@ -232,7 +243,7 @@
         audioBlock(d),
         `Approach: ${cleanStyle(d)}.`,
         `Changes requested: ${d.notes || 'none — match the original as closely as the format allows.'}`,
-        `Generate via Higgsfield: use the original as a motion/style reference, apply the creator's Soul ID${d.audioMode === 'new' ? ' and locked voice' : ''}.`,
+        `Method: use Higgsfield's Kling 3.0 Motion Control (or Recast / character swap if it is available to you) — the source video is the MOTION reference and the creator's Soul character image is the character. Keep the source's timing and camera; do not copy the original person's face or clothes.${d.audioMode === 'new' ? ' Deliver new dialogue in the creator\'s voice.' : ''} Draft at the lowest resolution first.`, BUDGET,
         outLine(d)
       ])
     }
@@ -244,7 +255,7 @@
     return {
       concept: '', style: f.styles[0], creatorId: '', wardrobeIds: [], backgroundId: '', accessoryIds: [], brandId: '',
       platform: 'TikTok', duration: '30', hook: 'Let Claude decide',
-      audioMode: f.audio[0] || '', aspect: '4:5', count: '1', audioText: '', audioFile: null, notes: '', url: '', product: '', cta: ''
+      audioMode: f.audio[0] || '', aspect: '4:5', count: '1', beats: [], loop: false, refVideo: null, audioText: '', audioFile: null, notes: '', url: '', product: '', cta: ''
     };
   };
 

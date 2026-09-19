@@ -43,6 +43,17 @@
 
   const urls = new Map(); // id -> object URL, so thumbnails don't reload on every render
   M.blob = id => run('blobs', 'readonly', s => s.blobs.get(id));
+
+  // Temporary blobs (drafts still under review, and files the user gave a production). Keys start "tmp:" / "in:" so they never appear in Files.
+  M.putTemp = (key, blob) => run('blobs', 'readwrite', s => { s.blobs.put(blob, key); });
+  M.getTemp = key => run('blobs', 'readonly', s => s.blobs.get(key)).then(b => b || null);
+  M.delTemp = key => run('blobs', 'readwrite', s => { s.blobs.delete(key); }).then(() => { if (turls.has(key)) { URL.revokeObjectURL(turls.get(key)); turls.delete(key); } });
+  const turls = new Map();
+  M.tempUrl = async key => {
+    if (turls.has(key)) return turls.get(key);
+    const b = await M.getTemp(key); if (!b) return null;
+    const u = URL.createObjectURL(b); turls.set(key, u); return u;
+  };
   M.url = async id => {
     if (urls.has(id)) return urls.get(id);
     const b = await M.blob(id); if (!b) return null;
@@ -50,6 +61,10 @@
   };
   // fill <img>/<video> elements marked data-mid with their blob URL after a render
   M.hydrate = (scope) => {
+    (scope || document).querySelectorAll('[data-tmp]').forEach(el => {
+      if (el.dataset.done) return; el.dataset.done = '1';
+      M.tempUrl(el.dataset.tmp).then(u => { if (u) el.src = el.tagName === 'VIDEO' ? u + '#t=0.1' : u; });
+    });
     (scope || document).querySelectorAll('[data-mid]').forEach(el => {
       if (el.dataset.done) return; el.dataset.done = '1';
       M.url(el.dataset.mid).then(u => { if (u) el.src = el.tagName === 'VIDEO' ? u + '#t=0.1' : u; }); // #t shows a still frame as the thumbnail
@@ -104,7 +119,7 @@
     const rec = {
       id: CS.nid('m'), folder, creatorId: o.creatorId || '', kind, mime, size: blob.size,
       name: `${base}_${stamp()}_${Math.random().toString(36).slice(2, 5)}.${ext}`,
-      original: o.name || '', createdAt: CS.now(), source: o.source || 'upload', jobId: o.jobId || '', prompt: o.prompt || '',
+      original: o.name || '', createdAt: CS.now(), source: o.source || 'upload', jobId: o.jobId || '', prompt: o.prompt || '', kit: o.kit || '',
       synced: false, path: ''
     };
     await run(['meta', 'blobs'], 'readwrite', s => { s.meta.put(rec); s.blobs.put(blob, rec.id); });
@@ -181,6 +196,11 @@
     const fh = await sub.getFileHandle(name, { create: true });
     const w = await fh.createWritable();
     await w.write(blob || await M.blob(rec.id)); await w.close();
+    if (rec.kit) { // the caption / hashtags travel as a .txt next to the file
+      const stem = name.replace(/\.[^.]+$/, '');
+      const kname = await uniqueName(sub, stem + '.txt'), kh = await sub.getFileHandle(kname, { create: true }), kw = await kh.createWritable();
+      await kw.write(new Blob([rec.kit], { type: 'text/plain' })); await kw.close(); rec.kitPath = `${ROOT}/${rec.folder}/${rec.kind === 'vid' ? 'Vids' : 'Pics'}/${kname}`;
+    }
     rec.synced = true; rec.path = `${ROOT}/${rec.folder}/${rec.kind === 'vid' ? 'Vids' : 'Pics'}/${name}`;
     await saveMeta(rec);
     return true;
@@ -211,7 +231,10 @@
   // Save one or more items: the share sheet where the browser has one ("Save to Files" on iPhone), otherwise a download.
   M.saveToDevice = async recs => {
     const files = [];
-    for (const r of recs) { const b = await M.blob(r.id); if (b) files.push(new File([b], r.name, { type: r.mime })); }
+    for (const r of recs) {
+      const b = await M.blob(r.id); if (b) files.push(new File([b], r.name, { type: r.mime }));
+      if (r.kit) files.push(new File([r.kit], r.name.replace(/\.[^.]+$/, '') + '.txt', { type: 'text/plain' }));
+    }
     if (!files.length) return;
     if (navigator.canShare && navigator.canShare({ files })) {
       try { await navigator.share({ files }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
@@ -228,6 +251,7 @@
       for (const r of M.inFolder(f)) {
         const b = await M.blob(r.id);
         if (b) entries.push({ path: `${ROOT}/${f}/${r.kind === 'vid' ? 'Vids' : 'Pics'}/${r.name}`, blob: b });
+        if (b && r.kit) entries.push({ path: `${ROOT}/${f}/${r.kind === 'vid' ? 'Vids' : 'Pics'}/${r.name.replace(/\.[^.]+$/, '')}.txt`, blob: new Blob([r.kit], { type: 'text/plain' }) });
       }
     }
     const zip = await CSZip.build(entries, onProgress);

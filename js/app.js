@@ -28,7 +28,8 @@
 
   CS.render();
   // the media library loads asynchronously; re-render once it's ready so Files / Queue can show it
-  CS.media.init().then(() => CS.render());
+  // …then pick up any productions that were still running when the page was closed (never re-submits; only re-watches)
+  CS.media.init().then(() => { CS.render(); CS.produce.resumeAll(); });
 
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

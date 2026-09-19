@@ -38,6 +38,7 @@
         ${trends.length ? `<select data-bind="create.trendPick" style="width:auto;max-width:100%;"><option value="">Start from a logged trend…</option>${trends.map(t => `<option value="${t.id}">${esc(t.platform)}: ${esc(CS.truncate(t.topic, 50))}</option>`).join('')}</select>` : ''}
       </div>`;
     }
+    h += CS.createExt.secCopyVideo(f, d);
     if (f.product) h += field('Product / offer', `<input type="text" data-bind="create.product" value="${esc(d.product)}" placeholder="e.g. Grip Mount phone holder — 2 for $19">`);
     if (f.cta) h += field('Call to action', `<input type="text" data-bind="create.cta" value="${esc(d.cta)}" placeholder="e.g. Use code SAVE10 — link in bio">`);
     return h;
@@ -92,15 +93,15 @@
           ${field('Brand promo', brands)}
         </div>`;
     return field(f.id === 'sing' ? 'Performance style' : 'Style', `<div class="chips">${f.styles.map(s => chip('radio', 'style', s, esc(s.replace(/^Recommended: /, '')) + (s.indexOf('Recommended') === 0 ? ' <small>★</small>' : ''), d.style === s, 'style')).join('')}</div>`)
-      + grid
+      + grid + CS.createExt.loopBox(f, d)
       + field(esc(f.notesLabel || 'Extra notes') + ' <span class="muted">(optional)</span>', `<textarea data-bind="create.notes" placeholder="Anything else Claude should know…">${esc(d.notes)}</textarea>`);
   }
 
   function side(f, d) {
     const chk = CS.checkDraft(cur, d), ready = !chk.missing.length;
     const prompt = CS.buildPrompt(cur, d);
-    return `<div class="card">
-      <div class="row between"><h2>Prompt preview</h2><span class="tag ${ready ? 'done' : 'draft'}">${ready ? 'Ready' : 'Needs ' + chk.missing.length + ' more'}</span></div>
+    return CS.createExt.apiBox(cur, f, d) + `<div class="card">
+      <div class="row between"><h2>Or copy for Claude + Higgsfield</h2><span class="tag ${ready ? 'done' : 'draft'}">${ready ? 'Ready' : 'Needs ' + chk.missing.length + ' more'}</span></div>
       ${chk.missing.length ? `<ul class="checklist miss">${chk.missing.map(m => `<li>Add ${esc(m)}</li>`).join('')}</ul>` : ''}
       ${chk.warn.length ? `<ul class="checklist warn">${chk.warn.map(m => `<li>${esc(m)}</li>`).join('')}</ul>` : ''}
       <pre class="prompt tall">${esc(prompt)}</pre>
@@ -124,6 +125,7 @@
       const f = CS.FORMATS[cur], d = draft(cur);
       const sections = [
         ['Concept', f.image ? 'What is in the photo?' : 'What is this video about?', secConcept(f, d)],
+        ['Script', 'Each beat is one shot (optional)', CS.createExt.secScript(f, d)],
         ['Creator', f.creator === 'required' ? 'Who is on screen? (required)' : 'Who is on screen? (optional)', secCreator(f, d)],
         ['Look', 'Outfit, setting and props', secLook(d)],
         ['Sound', 'How should it sound?', secSound(f, d)],
@@ -221,6 +223,7 @@
 
   CS.binds.create = (name, el) => {
     const d = draft(cur);
+    if (CS.createExt.bind(name, el, d)) return;
     if (name === 'wardrobeIds' || name === 'accessoryIds') {
       d[name] = Array.from(document.querySelectorAll(`input[data-bind="create.${name}"]:checked`)).map(i => i.value);
     } else if (name === 'trendPick' || name === 'audioTrendPick') {
@@ -233,10 +236,11 @@
       const file = el.files && el.files[0];
       if (!file) { d.audioFile = null; CS.persist(); rerender(); return; }
       const url = URL.createObjectURL(file), a = new Audio();
-      const finish = dur => { d.audioFile = { name: file.name, duration: dur }; URL.revokeObjectURL(url); CS.persist(); rerender(); };
+      // keep the real file (in the browser's storage) and its length: making it in the app needs the audio itself
+      const finish = (dur, secs) => { d.audioFile = { name: file.name, duration: dur, secs: secs || 0, size: file.size, type: file.type }; URL.revokeObjectURL(url); CS.media.putTemp('in:draft:' + cur + ':audio', file); CS.persist(); rerender(); };
       a.preload = 'metadata';
-      a.onloadedmetadata = () => finish(isFinite(a.duration) ? Math.round(a.duration) + 's' : 'unknown length');
-      a.onerror = () => finish('unknown length');
+      a.onloadedmetadata = () => finish(isFinite(a.duration) ? Math.round(a.duration) + 's' : 'unknown length', isFinite(a.duration) ? a.duration : 0);
+      a.onerror = () => finish('unknown length', 0);
       a.src = url;
       return;
     } else if (name === 'creatorId') {
@@ -277,6 +281,7 @@
 
   // used by other screens
   CS.create = {
+    api: { draft, cur: () => cur, rerender, persist: () => CS.persist(), updateSide },
     // start a new video with this creator, keeping the current format if it takes a creator
     withCreator(id) {
       const fid = CS.FORMATS[CS.S.lastFormat] ? CS.S.lastFormat : 'ugc';

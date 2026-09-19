@@ -11,6 +11,14 @@
       return `<div class="job-mini"><span class="jt"><b>${esc(title(j))}</b></span><span class="tag ${j.status}">${esc(j.status)}</span><span class="muted">${esc(j.createdAt)}</span></div>`;
     }
     const btns = [];
+    if (j.run) { // made in the app: its own screen has the controls
+      const t = window.CSFactory.totals(j);
+      btns.push(`<a class="btn small" href="#/produce/${j.id}">${j.status === 'done' ? 'Open' : 'Continue'} production</a>`, `<button class="btn small danger" data-action="jobDelete" data-id="${j.id}">Delete</button>`);
+      return `<div class="item job"><div class="jhead"><div><div class="jtitle">${esc(title(j))}</div>
+        <div style="margin-top:4px;"><span class="tag">${esc(label(j.type))}</span><span class="tag sent">made in app</span><span class="tag ${j.status === 'done' ? 'done' : 'draft'}">${j.status === 'done' ? 'finished' : 'in progress'}</span><span class="muted">${esc(j.createdAt)}</span></div></div>
+        <div class="muted">$${t.charged.toFixed(2)} spent${t.reserved ? ' · $' + t.reserved.toFixed(2) + ' pending' : ''}</div></div>
+        <div class="row" style="margin-top:8px;">${btns.join('')}</div></div>`;
+    }
     if (j.status === 'draft') btns.push(`<button class="btn small" data-action="jobCopySent" data-id="${j.id}">Copy &amp; mark sent</button>`);
     else btns.push(`<button class="btn small secondary" data-action="jobCopy" data-id="${j.id}">Copy prompt</button>`);
     btns.push(j.status === 'done'
@@ -64,7 +72,8 @@
     CS.S.settings.creditLog = CS.S.settings.creditLog.filter(l => l.jobId !== j.id); // un-log credits if it was done
     j.credits = 0; j.note = ''; j.status = 'draft'; CS.save();
   };
-  CS.actions.jobDelete = d => CS.ui.confirm('Delete this job? Any credits logged for it are removed too.', () => {
+  CS.actions.jobDelete = d => CS.ui.confirm('Delete this job? Any credits logged for it are removed too. Files already saved from it stay in Files.', () => {
+    const gone = CS.find.job(d.id); if (gone && gone.run) CS.produce.cleanup(gone);
     CS.S.jobs = CS.S.jobs.filter(j => j.id !== d.id);
     CS.S.settings.creditLog = CS.S.settings.creditLog.filter(l => l.jobId !== d.id);
     CS.save();

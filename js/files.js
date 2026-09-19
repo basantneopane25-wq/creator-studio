@@ -71,6 +71,7 @@
         <div class="row" style="margin-top:6px;">
           <button class="btn small secondary" data-action="fView" data-id="${m.id}">${m.kind === 'vid' ? 'Play' : 'View'}</button>
           <button class="btn small secondary" data-action="fSave" data-id="${m.id}">Save</button>
+          ${m.kit ? `<button class="btn small secondary" data-action="pKit" data-id="${m.id}">Caption</button>` : ''}
           <button class="btn small ghost" data-action="fDelete" data-id="${m.id}" aria-label="Delete">🗑</button></div>
       </div>`).join('');
     return `
