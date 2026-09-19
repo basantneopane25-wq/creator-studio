@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Creator Studio</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111418">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
@@ -17,16 +17,43 @@
     --text:#e7ebf0; --muted:#8b96a5; --accent:#5b8def; --accent2:#3aa76d;
     --warn:#d99a3a; --danger:#d9534f; --locked:#7c5cd1;
   }
-  *{box-sizing:border-box;}
-  body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{overscroll-behavior-y:contain;}
+  body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px;
+    padding-top:env(safe-area-inset-top);}
   header{display:flex;align-items:center;gap:16px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;flex-wrap:wrap;}
   header h1{font-size:16px;margin:0;white-space:nowrap;}
   nav{display:flex;gap:4px;flex-wrap:wrap;}
-  nav button{background:transparent;border:1px solid transparent;color:var(--muted);padding:6px 10px;border-radius:6px;cursor:pointer;font-size:13px;}
+  nav button{background:transparent;border:1px solid transparent;color:var(--muted);padding:6px 10px;border-radius:6px;cursor:pointer;font-size:13px;touch-action:manipulation;}
   nav button.active{background:var(--panel2);color:var(--text);border-color:var(--border);}
   nav button:hover{color:var(--text);}
   .credit-pill{margin-left:auto;font-size:12px;color:var(--muted);background:var(--panel2);padding:5px 10px;border-radius:20px;border:1px solid var(--border);white-space:nowrap;}
   main{padding:16px;max-width:1200px;margin:0 auto;}
+  #bottomNav{display:none;}
+  @media (max-width:760px){
+    header nav{display:none;}
+    header{padding:10px 12px;}
+    header h1{font-size:15px;}
+    main{padding:12px;padding-bottom:88px;}
+    #bottomNav{
+      display:flex;position:fixed;left:0;right:0;bottom:0;z-index:20;
+      background:var(--panel);border-top:1px solid var(--border);
+      overflow-x:auto;-webkit-overflow-scrolling:touch;
+      padding:4px env(safe-area-inset-right) calc(4px + env(safe-area-inset-bottom)) env(safe-area-inset-left);
+    }
+    #bottomNav button{
+      flex:0 0 auto;min-width:64px;min-height:52px;background:transparent;border:none;color:var(--muted);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+      font-size:10px;padding:6px 8px;touch-action:manipulation;
+    }
+    #bottomNav button .ic{font-size:18px;}
+    #bottomNav button.active{color:var(--accent);}
+    button.btn, .subtabs button{min-height:40px;}
+    input[type=text],input[type=number],input[type=url],input[type=date],select,textarea{font-size:16px;}
+    .modal-bg{padding:0;align-items:stretch;}
+    .modal{max-width:none;width:100%;min-height:100vh;border-radius:0;
+      padding:16px 16px calc(16px + env(safe-area-inset-bottom));}
+  }
   .view{display:none;}
   .view.active{display:block;}
   .card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:12px;}
@@ -86,6 +113,8 @@
   <nav id="nav"></nav>
   <div class="credit-pill" id="creditPill">credits: --</div>
 </header>
+
+<nav id="bottomNav"></nav>
 
 <main>
 
@@ -403,17 +432,25 @@ const VIEWS = [
   ['sing','Sing'],['copy','Copy Trend'],['library','Library'],['brands','Brands'],['trends','Trends'],
   ['jobs','Jobs'],['settings','Settings']
 ];
+const VIEW_ICONS = {
+  dashboard:'🏠', creators:'🧑', brainrot:'🐀', story:'📖', sing:'🎤', copy:'📋',
+  library:'🎒', brands:'🏷️', trends:'📈', jobs:'🗂️', settings:'⚙️'
+};
 function buildNav(){
   const nav = document.getElementById('nav');
   nav.innerHTML = VIEWS.map(([id,label])=>`<button data-v="${id}">${label}</button>`).join('');
   nav.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>go(b.dataset.v)));
+
+  const bottom = document.getElementById('bottomNav');
+  bottom.innerHTML = VIEWS.map(([id,label])=>`<button data-v="${id}"><span class="ic">${VIEW_ICONS[id]||'•'}</span><span>${label}</span></button>`).join('');
+  bottom.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>go(b.dataset.v)));
 }
 let currentView = 'dashboard';
 function go(id){
   currentView = id;
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-'+id).classList.add('active');
-  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active', b.dataset.v===id));
+  document.querySelectorAll('#nav button, #bottomNav button').forEach(b=>b.classList.toggle('active', b.dataset.v===id));
   renderAll();
 }
 
