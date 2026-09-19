@@ -18,8 +18,8 @@
       const s = CS.S.settings, log = s.creditLog, ig = CS.imagegen.settings(), hg = s.higgs;
       return `
         <div class="page-head"><div><h1>Settings</h1></div></div>
-        <div class="card"><h2>Make videos inside the app (Higgsfield API)</h2>
-          <p class="muted">Lets the app generate, preview and save videos and pictures itself. It uses Higgsfield’s <b>API</b>, a separate prepaid dollar balance (from $5) — your $59 plan credits can’t be used for this. Every step is priced first and needs your OK; nothing is charged for failed jobs.</p>
+        <div class="card"><h2>Higgsfield API <span class="tag draft">optional · not used</span></h2>
+          <p class="muted"><b>You don’t need this.</b> The app now builds a prompt you paste into a Claude chat with the Higgsfield connector on — no API key, nothing to set up here. The fields below are kept only for older in-app productions; leave the mode on “Off”. Older text: lets the app generate, preview and save videos and pictures itself. It uses Higgsfield’s <b>API</b>, a separate prepaid dollar balance (from $5) — your $59 plan credits can’t be used for this. Every step is priced first and needs your OK; nothing is charged for failed jobs.</p>
           <div class="grid2">
             <div class="field"><label>How the app talks to Higgsfield</label><select data-bind="settings.hmode">
               <option value="off" ${hg.mode === 'off' ? 'selected' : ''}>Off — I’ll use Claude + Higgsfield (copy prompts)</option>

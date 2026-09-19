@@ -1,7 +1,7 @@
 /* Runs every test suite.   node tools/test-all.js   (needs Node 18+, no installs) */
 const { spawnSync } = require('child_process');
 const path = require('path');
-const suites = ['test-higgs.js', 'test-recipes.js', 'test-postkit.js', 'test-factory.js', 'test-proxy.mjs'];
+const suites = ['test-higgs.js', 'test-recipes.js', 'test-prompts.js', 'test-postkit.js', 'test-factory.js', 'test-proxy.mjs'];
 let failed = 0;
 for (const s of suites) {
   console.log('\n=== ' + s + ' ===');

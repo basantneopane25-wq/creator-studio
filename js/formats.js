@@ -17,14 +17,31 @@
   };
 
   /* ---------- prompt building blocks ---------- */
+  const soulOf = cr => (cr && typeof cr.soulId === 'string' ? cr.soulId.trim() : '');
+  // Which models to use (names come from recipes.js so the two never disagree)
+  function modelLine(fid, c) {
+    const M = window.CSRecipes.MODELS, cr = c.creator, soul = !!soulOf(cr), photos = !!(cr && (cr.faceRefs || []).length);
+    const still = soul ? `${M.soul2.label} with the Soul ID` : photos ? `${M.grok.label.replace(/ \(.*/, '')} with the reference photos` : `${M.soul2.label} (text prompt)`;
+    if (fid === 'photo') return `Model: ${still}.`;
+    if (fid === 'sing' || fid === 'copy') {
+      const refs = soul ? `first make a still of the Soul ID character with ${M.soul2.label} and use it as Image 1` : 'use the attached reference photos as Images 1+';
+      return `Model: ${M.seedRef.label} — ${refs}. Draft at 480p, final at 1080p only for the take I approve.`;
+    }
+    return `Models: starting stills with ${still}; animate with ${M.klingStd.label} image-to-video (${M.klingPro.label} only for the final).`;
+  }
+
   function castBlock(d, c, noVoice) {
     const cr = c.creator;
     if (!cr) return 'Creator: none — no fixed identity needed unless the concept calls for one.';
     const lines = [`Creator: ${cr.name} — ${[cr.gender, cr.ethnicity, cr.bodyType, cr.age].filter(Boolean).join(', ')}`];
     if (cr.profession || cr.niche) lines.push(`Persona: ${cr.profession || ''}${cr.niche ? ' · ' + cr.niche : ''}`);
-    lines.push(cr.locked
-      ? 'Identity: LOCKED Soul ID — do not change face, body or overall look.'
-      : 'Identity: not locked yet — use the saved Soul ID if one exists, otherwise ask me before generating.');
+    const soulId = soulOf(cr), photos = (cr.faceRefs || []).length;
+    lines.push(soulId
+      ? `Identity: Use the Higgsfield Soul ID character named '${soulId}' for this creator — do not re-describe or regenerate their identity.`
+      : photos
+        ? `Identity: no Soul ID saved. Attach the ${photos} reference photo${photos === 1 ? '' : 's'} of ${cr.name} to this chat and use them as image references so the face and body match. Do not invent a new face.`
+        : `Identity: no Soul ID and no reference photos saved — ask me to attach photos of ${cr.name} before generating.`);
+    if (cr.locked) lines.push('The face, body and overall look are LOCKED — never change them.');
     if (!noVoice) lines.push(d.audioMode === 'new'
       ? `Voice: ${cr.voiceName || '(none set)'} — reuse this saved voice, never generate a new one for them.`
       : `Voice: their saved voice ("${cr.voiceName || 'none set'}") is NOT used in this video.`);
@@ -65,7 +82,7 @@
     const beats = d.beats && d.beats.length ? d.beats : R.defaultBeats(fid, cx, parseInt(d.duration, 10) || 15);
     return 'Shot list (one Kling 3.0 multi-shot clip, max 15s total):\n' + beats.map((b, i) => `  ${i + 1}. (${b.secs}s) ${R.klingShot(b, cx)}`).join('\n');
   }
-  const kling = 'Method: 1) make 2 starting stills of the creator (use their saved Soul character so the face matches; vertical 9:16); wait for my pick. 2) animate the picked still with Kling 3.0 image-to-video (sound on, multi-shot as listed). In image-to-video describe how the scene evolves, do not re-describe how the person looks.';
+  const kling = 'Method: 1) make 2 starting stills of the creator (identity exactly as given above; vertical 9:16); wait for my pick. 2) animate the picked still with Kling 3.0 image-to-video (sound on, multi-shot as listed). In image-to-video describe how the scene evolves, do not re-describe how the person looks.';
 
   const join = arr => arr.filter(Boolean).join('\n');
 
@@ -95,7 +112,7 @@
         `Angle: ${d.concept}`,
         d.cta && `Call to action: ${d.cta}`,
         styleLine(d), hookLine(d), audioBlock(d), notesLine(d),
-        shotList('ugc', d, c), kling + ' Keep it honest and native-feeling, not a polished commercial.', BUDGET,
+        modelLine('ugc', c), shotList('ugc', d, c), kling + ' Keep it honest and native-feeling, not a polished commercial.', BUDGET,
         outLine(d)
       ])
     },
@@ -121,7 +138,7 @@
         `Concept: ${d.concept}`,
         castBlock(d, c), lookBlock(c), brandBlock(c),
         styleLine(d), hookLine(d), audioBlock(d), notesLine(d),
-        shotList('story', d, c), kling + (d.loop ? ' Make it loop: end the clip on its first frame (use the start frame as the last frame).' : ''), BUDGET,
+        modelLine('story', c), shotList('story', d, c), kling + (d.loop ? ' Make it loop: end the clip on its first frame (use the start frame as the last frame).' : ''), BUDGET,
         outLine(d)
       ])
     },
@@ -147,7 +164,7 @@
         `Concept: ${d.concept}`,
         castBlock(d, c), lookBlock(c), brandBlock(c),
         styleLine(d), hookLine(d), audioBlock(d), notesLine(d),
-        shotList('brainrot', d, c), 'Method: make a still (the cheapest good image model is fine — no fixed face needed unless a creator is set), then animate it with Kling 3.0 image-to-video, 6-8 seconds, fast cuts.' + (d.loop ? ' Make it loop: end on the first frame.' : ''), BUDGET,
+        modelLine('brainrot', c), shotList('brainrot', d, c), 'Method: make a still (the cheapest good image model is fine — no fixed face needed unless a creator is set), then animate it with Kling 3.0 image-to-video, 6-8 seconds, fast cuts.' + (d.loop ? ' Make it loop: end on the first frame.' : ''), BUDGET,
         outLine(d)
       ])
     },
@@ -175,7 +192,7 @@
         d.concept && `Scene / vibe: ${d.concept}`,
         audioBlock(d),
         `Performance style: ${cleanStyle(d)}`, hookLine(d), notesLine(d, 'Notes'),
-        'Method: use Higgsfield Lipsync Studio (or Seedance 2.0 reference-to-video with the creator photos as image references and this audio as Audio 1 — audio needs a visual reference and at most 15s). The character lip-syncs and performs to the audio; do not generate new vocals or swap the track. Draft at the lowest resolution first.', BUDGET,
+        modelLine('sing', c), 'Method: Seedance 2.0 reference-to-video with the creator as the image reference and this audio as Audio 1 (audio needs a visual reference and is at most 15s). The character lip-syncs and performs to the audio; do not generate new vocals or swap the track. Draft at the lowest resolution first.', BUDGET,
         outLine(d)
       ])
     },
@@ -223,8 +240,8 @@
         'INFLUENCER PHOTO',
         castBlock(d, c, true), lookBlock(c), brandBlock(c),
         `Scene: ${d.concept}`,
-        styleLine(d), notesLine(d),
-        `Method: generate ${d.count} photorealistic still image${d.count === '1' ? '' : 's'} with the creator's saved Soul character so face and body match every other post (a cheap fast image model such as Nano Banana Pro is fine for drafts). Natural skin texture, no text or watermarks. Aspect ratio ${d.aspect}. Show me the results before making any more.`, BUDGET,
+        styleLine(d), notesLine(d), modelLine('photo', c),
+        `Method: generate ${d.count} photorealistic still image${d.count === '1' ? '' : 's'} with the creator's identity exactly as given above so face and body match every other post. Natural skin texture, no text or watermarks. Aspect ratio ${d.aspect}. Show me the results before making any more.`, BUDGET,
       ])
     },
 
@@ -243,7 +260,7 @@
         audioBlock(d),
         `Approach: ${cleanStyle(d)}.`,
         `Changes requested: ${d.notes || 'none — match the original as closely as the format allows.'}`,
-        `Method: use Higgsfield's Kling 3.0 Motion Control (or Recast / character swap if it is available to you) — the source video is the MOTION reference and the creator's Soul character image is the character. Keep the source's timing and camera; do not copy the original person's face or clothes.${d.audioMode === 'new' ? ' Deliver new dialogue in the creator\'s voice.' : ''} Draft at the lowest resolution first.`, BUDGET,
+        modelLine('copy', c), `Method: the source video is Video 1 — the MOTION and pacing reference only; the creator (identity as given above) is the person. Keep the source's timing and camera; do not copy the original person's face or clothes.${d.audioMode === 'new' ? ' Deliver new dialogue in the creator\'s voice.' : ''} Draft at the lowest resolution first.`, BUDGET,
         outLine(d)
       ])
     }

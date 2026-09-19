@@ -1,6 +1,6 @@
 // Network-first for the app's own files so updates show up right away; the cache is only the offline fallback.
 // cache:'no-cache' makes the browser re-check with the server instead of trusting its own ~10 minute HTTP cache.
-const CACHE = 'creator-studio-v4';
+const CACHE = 'creator-studio-v5';
 const FILES = [
   './', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './css/styles.css',
   './js/core.js',
