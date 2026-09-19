@@ -5,7 +5,7 @@
 
   CS.views.settings = {
     render() {
-      const s = CS.S.settings, log = s.creditLog;
+      const s = CS.S.settings, log = s.creditLog, ig = CS.imagegen.settings();
       return `
         <div class="page-head"><div><h1>Settings</h1></div></div>
         <div class="card"><h2>Higgsfield plan &amp; credit budget</h2>
@@ -19,6 +19,16 @@
           <p class="muted">Marking a job done with a credit amount logs it here automatically. You can also add a manual entry.</p>
           <div class="row"><input type="number" id="manual_credit" min="0" placeholder="credits" style="max-width:120px;"><input type="text" id="manual_note" placeholder="note" style="flex:1;min-width:140px;"><button class="btn secondary" data-action="setLog">Log</button></div>
           <div style="margin-top:10px;">${log.length ? `<table><tr><th>Date</th><th>Credits</th><th>Note</th><th></th></tr>${log.slice(0, 50).map((l, i) => `<tr><td>${esc(l.date)}</td><td>${+l.amount || 0}</td><td>${esc(l.note)}</td><td>${l.jobId ? '' : `<button class="btn small ghost" data-action="setLogDel" data-i="${i}">✕</button>`}</td></tr>`).join('')}</table>` : '<div class="empty">No usage logged yet.</div>'}</div>
+        </div>
+        <div class="card"><h2>Picture generation</h2>
+          <p class="muted">Used by “Generate here” for Influencer Photos. Videos, and pictures that must keep a creator’s locked face, still go through Higgsfield in your Claude chat.</p>
+          <div class="grid2">
+            <div class="field"><label>Provider</label><select data-bind="settings.provider"><option value="free" ${ig.provider === 'free' ? 'selected' : ''}>Free service (no account) — slower, no consistent face</option><option value="custom" ${ig.provider === 'custom' ? 'selected' : ''}>My own key (OpenAI-compatible)</option></select></div>
+            ${ig.provider === 'custom' ? `<div class="field"><label>API base URL</label><input type="text" id="ig_base" value="${esc(ig.baseUrl)}"></div>
+            <div class="field"><label>Model</label><input type="text" id="ig_model" value="${esc(ig.model)}" placeholder="gpt-image-1"></div>
+            <div class="field"><label>API key</label><input type="password" id="ig_key" value="${esc(ig.apiKey)}" autocomplete="off" placeholder="sk-…"></div>` : ''}
+          </div>
+          ${ig.provider === 'custom' ? '<p class="muted">Your provider bills you for each picture. The key is stored only in this browser and is left out of backup exports — use a key with a spending limit.</p><button class="btn" data-action="igSave">Save</button>' : ''}
         </div>
         <div class="card"><h2>Backup</h2>
           <p class="muted">Everything lives in this browser’s local storage only. Export regularly, and before clearing browser data.</p>
@@ -44,16 +54,25 @@
     CS.S.settings.creditLog.unshift({ date: CS.today(), amount: amt, note: document.getElementById('manual_note').value.trim() || 'manual entry' });
     CS.save();
   };
+  CS.actions.igSave = () => {
+    const ig = CS.S.settings.imagegen;
+    ig.baseUrl = document.getElementById('ig_base').value.trim() || 'https://api.openai.com/v1';
+    ig.model = document.getElementById('ig_model').value.trim() || 'gpt-image-1';
+    ig.apiKey = document.getElementById('ig_key').value.trim();
+    CS.save(); CS.ui.toast('Picture settings saved.');
+  };
   CS.actions.setLogDel = d => { CS.S.settings.creditLog.splice(+d.i, 1); CS.save(); };
 
   CS.actions.exportData = () => {
-    const json = JSON.stringify(CS.S, null, 2), a = document.createElement('a');
+    const copy = CS.clone(CS.S); copy.settings.imagegen.apiKey = ''; // never write the API key into a file you might share
+    const json = JSON.stringify(copy, null, 2), a = document.createElement('a');
     try { a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' })); }
     catch (e) { a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(json); }
     a.download = 'creator-studio-backup-' + CS.today() + '.json'; a.click();
   };
   CS.actions.importPick = () => document.getElementById('importFile').click();
   CS.binds.settings = (k, el) => {
+    if (k === 'provider') { CS.S.settings.imagegen.provider = el.value; CS.save(); return; }
     if (k !== 'import') return;
     const file = el.files[0]; if (!file) return;
     const r = new FileReader();
@@ -61,10 +80,10 @@
       try {
         const data = JSON.parse(r.result);
         if (!data || !Array.isArray(data.creators)) throw new Error('not a Creator Studio backup');
-        CS.ui.confirm('Importing replaces everything currently in this browser. Continue?', () => { CS.S = CS.normalize(data); CS.save(); CS.ui.toast('Backup imported.'); }, { yes: 'Import', danger: false, title: 'Import backup' });
+        CS.ui.confirm('Importing replaces everything currently in this browser. Continue?', () => { const key = CS.S.settings.imagegen.apiKey; CS.S = CS.normalize(data); if (!CS.S.settings.imagegen.apiKey) CS.S.settings.imagegen.apiKey = key; CS.save(); CS.ui.toast('Backup imported.'); }, { yes: 'Import', danger: false, title: 'Import backup' });
       } catch (e) { CS.ui.toast('That file isn’t a valid backup.'); }
     };
     r.readAsText(file);
   };
-  CS.actions.resetAll = () => CS.ui.confirm('This erases all creators, library items, jobs and settings in this browser. Export a backup first.', () => { CS.S = CS.blankState(); CS.save(); CS.ui.toast('All data erased.'); }, { yes: 'Erase everything', title: 'Erase all data' });
+  CS.actions.resetAll = () => CS.ui.confirm('This erases all creators, library items, jobs and settings in this browser. Export a backup first. Pictures and videos in Files are not erased — remove those in Files.', () => { CS.S = CS.blankState(); CS.save(); CS.ui.toast('All data erased.'); }, { yes: 'Erase everything', title: 'Erase all data' });
 })(window.CS);

@@ -208,3 +208,15 @@ body.modal-open{overflow:hidden;}
   .modal-bg{padding:0;align-items:flex-end;}
   .modal,.modal.wide{border-radius:16px 16px 0 0;max-width:none;max-height:92vh;overflow:auto;}
 }
+
+/* ---------- files & generated pictures ---------- */
+.err-line{color:#f0a3a0;font-size:12.5px;margin:4px 0;}
+.gen-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:8px;}
+.gen-item{margin:0;}
+.gen-item img{width:100%;border-radius:8px;border:1px solid var(--border);display:block;margin-bottom:6px;cursor:zoom-in;background:var(--panel2);}
+.media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;}
+.media-item{background:var(--panel2);border:1px solid var(--border);border-radius:var(--radius);padding:8px;}
+.media-item .thumb{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:7px;background:#000;display:block;cursor:pointer;}
+.folder-card{display:block;color:var(--text);}
+.folder-card:hover{border-color:var(--muted);}
+@media (max-width:720px){ .media-grid{grid-template-columns:repeat(2,1fr);} }

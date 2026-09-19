@@ -1,10 +1,10 @@
 // Network-first for the app's own files so updates show up right away; the cache is only the offline fallback.
-const CACHE = 'creator-studio-v2';
+const CACHE = 'creator-studio-v3';
 const FILES = [
   './', './index.html', './manifest.json', './icon-192.png', './icon-512.png',
   './css/styles.css',
-  './js/core.js', './js/formats.js', './js/create.js', './js/queue.js',
-  './js/creators.js', './js/library.js', './js/settings.js', './js/app.js'
+  './js/core.js', './js/zip.js', './js/media.js', './js/imagegen.js', './js/formats.js', './js/create.js', './js/queue.js',
+  './js/creators.js', './js/files.js', './js/library.js', './js/settings.js', './js/app.js'
 ];
 
 self.addEventListener('install', e => {

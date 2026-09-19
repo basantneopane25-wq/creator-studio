@@ -26,9 +26,16 @@
         ${j.status === 'done' ? `<div class="muted">${+j.credits || 0} credits</div>` : ''}
       </div>
       ${j.note ? `<div class="muted" style="margin-top:6px;">Result: ${esc(j.note)}</div>` : ''}
+      ${attachHtml(j)}
       <details><summary>Show prompt</summary><pre class="prompt">${esc(j.prompt)}</pre></details>
       <div class="row" style="margin-top:8px;">${btns.join('')}</div>
     </div>`;
+  }
+
+  function attachHtml(j) {
+    const att = CS.media && CS.media.ready ? CS.media.items.filter(m => m.jobId === j.id) : [];
+    if (!att.length) return '';
+    return `<div style="margin-top:6px;"><a href="#/files/${encodeURIComponent(att[0].folder)}">📎 ${att.length} file${att.length === 1 ? '' : 's'} saved in ${esc(att[0].folder)}</a></div>`;
   }
 
   /* ---------- queue view ---------- */
@@ -68,11 +75,12 @@
     CS.ui.modal({
       title: 'Mark as done',
       body: `<div class="field"><label>Credits this used</label><input type="number" id="jd_credits" min="0" step="any" value="${+j.credits || 0}"></div>
-             <div class="field"><label>Where did it land? (Drive link / filename)</label><input type="text" id="jd_note" value="${esc(j.note || '')}"></div>`,
+             <div class="field"><label>Where did it land? (Drive link / filename)</label><input type="text" id="jd_note" value="${esc(j.note || '')}"></div>
+             <div class="field"><label>Attach the finished file(s) — filed into the creator’s Vids / Pics folder</label><input type="file" id="jd_files" multiple accept="video/*,image/*"></div>`,
       footer: `<button class="btn secondary" data-action="closeModal">Cancel</button><button class="btn green" data-action="jobDoneSave" data-id="${j.id}">Save</button>`
     });
   };
-  CS.actions.jobDoneSave = d => {
+  CS.actions.jobDoneSave = async d => {
     const j = CS.find.job(d.id); if (!j) return;
     const credits = Math.max(0, parseFloat(document.getElementById('jd_credits').value) || 0);
     const note = document.getElementById('jd_note').value.trim();
@@ -80,7 +88,18 @@
     log.unshift({ date: CS.today(), amount: credits, note: 'Job: ' + label(j.type) + (note ? ' — ' + note : ''), jobId: j.id });
     CS.S.settings.creditLog = log;
     j.status = 'done'; j.credits = credits; j.note = note;
-    CS.ui.closeModal(); CS.save(); CS.ui.toast('Marked done.');
+    const input = document.getElementById('jd_files'), files = input ? Array.from(input.files) : [];
+    CS.ui.closeModal(); CS.save();
+    if (!files.length) { CS.ui.toast('Marked done.'); return; }
+    CS.ui.toast('Saving ' + files.length + ' file' + (files.length === 1 ? '' : 's') + '…');
+    let ok = 0, skipped = 0;
+    for (const f of files) {
+      try { await CS.media.add({ blob: f, name: f.name, creatorId: (j.draft && j.draft.creatorId) || '', source: 'job', jobId: j.id }); ok++; }
+      catch (e) { if (e.skip) { skipped++; continue; } CS.ui.toast('Couldn’t save ' + f.name + ' — ' + (e.message || 'storage is full')); break; }
+    }
+    CS.render();
+    if (ok) CS.ui.toast('Done — ' + ok + ' file' + (ok === 1 ? '' : 's') + ' saved' + (skipped ? ` (${skipped} skipped: not a picture or video)` : '') + '.', { label: 'Open Files', fn: () => CS.go('files/' + encodeURIComponent(CS.media.items[0].folder)) });
+    else if (skipped) CS.ui.toast('Marked done. Only pictures and videos can be attached.');
   };
 
   /* ---------- home ---------- */

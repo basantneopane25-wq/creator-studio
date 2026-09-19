@@ -71,6 +71,7 @@ Do not alter face, body type, or voice after this is confirmed — this identity
         <div class="muted" style="margin-bottom:12px;">These are pre-selected in Create when you pick this creator.</div>
         <h3>Identity prompt</h3><pre class="prompt">${esc(prompt)}</pre>`,
       footer: `<button class="btn danger small" data-action="cDelete" data-id="${c.id}">Delete</button><span class="spacer"></span>
+        <a class="btn secondary small" href="#/files/${encodeURIComponent(CS.media.folderFor(c.id))}">📁 Files (${CS.media.items.filter(m => m.creatorId === c.id).length})</a>
         <button class="btn secondary small" data-action="cCopyPrompt" data-id="${c.id}">Copy identity prompt</button>
         ${c.locked ? '' : `<button class="btn secondary small" data-action="wizOpen" data-id="${c.id}">Edit</button><button class="btn green small" data-action="cLock" data-id="${c.id}">Confirm &amp; lock</button>`}
         <button class="btn small" data-action="cCreateClose" data-id="${c.id}">✨ Create with ${esc(c.name)}</button>`
@@ -151,8 +152,11 @@ Do not alter face, body type, or voice after this is confirmed — this identity
     if (step === 0 && !wiz.name.trim()) { CS.ui.toast('Give the creator a name.'); return; }
     if (step < 4) { step++; renderWiz(); return; }
     const id = wiz.editId; delete wiz.editId;
-    if (id) { Object.assign(CS.find.creator(id), wiz); }
-    else { wiz.id = CS.nid('cr'); CS.S.creators.push(wiz); gFilter = 'all'; }
+    let saved;
+    if (id) { saved = CS.find.creator(id); Object.assign(saved, wiz); }
+    else { wiz.id = CS.nid('cr'); CS.S.creators.push(wiz); saved = wiz; gFilter = 'all'; }
+    CS.media.folderFor(saved.id); // fixes the folder name now, so later renames never move files
+    CS.media.ensureFolders(saved).catch(() => {}); // Pics + Vids folders appear on the phone straight away (if connected)
     wiz = null; CS.ui.closeModal(); CS.save(); CS.ui.toast('Creator saved as draft.');
     CS.go('creators');
   };

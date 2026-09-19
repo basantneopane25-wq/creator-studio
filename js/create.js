@@ -7,7 +7,7 @@
     const D = CS.S.drafts, f = CS.FORMATS[fid];
     if (!D[fid]) D[fid] = CS.blankDraft(fid);
     const d = Object.assign(CS.blankDraft(fid), D[fid]);
-    if (f.audio.indexOf(d.audioMode) < 0) d.audioMode = f.audio[0];
+    d.audioMode = f.audio.length ? (f.audio.indexOf(d.audioMode) < 0 ? f.audio[0] : d.audioMode) : '';
     D[fid] = d;
     return d;
   }
@@ -67,6 +67,7 @@
   }
 
   function secSound(f, d) {
+    if (!f.audio.length) return '';
     let h = `<div class="chips" style="margin-bottom:12px;">${f.audio.map(m => `<label class="chip big"><input type="radio" name="audioMode" data-bind="create.audioMode" value="${m}" ${d.audioMode === m ? 'checked' : ''}><span><b>${CS.AUDIO_MODES[m].label}</b><small>${CS.AUDIO_MODES[m].hint}</small></span></label>`).join('')}</div>`;
     if (d.audioMode === 'trend') {
       h += field('Trending sound (name or link)', `<input type="text" data-bind="create.audioText" value="${esc(d.audioText)}" placeholder="e.g. sound name, or link to the original audio">`);
@@ -81,13 +82,17 @@
   function secDetails(f, d) {
     const sel = (bind, arr, cur, fmt) => `<select data-bind="create.${bind}">${arr.map(v => `<option value="${esc(v)}" ${cur === v ? 'selected' : ''}>${esc(fmt ? fmt(v) : v)}</option>`).join('')}</select>`;
     const brands = `<select data-bind="create.brandId"><option value="">None</option>${CS.S.brands.map(b => `<option value="${b.id}" ${d.brandId === b.id ? 'selected' : ''}>${esc(b.name)}</option>`).join('')}</select>`;
-    return field(f.id === 'sing' ? 'Performance style' : 'Style', `<div class="chips">${f.styles.map(s => chip('radio', 'style', s, esc(s.replace(/^Recommended: /, '')) + (s.indexOf('Recommended') === 0 ? ' <small>★</small>' : ''), d.style === s, 'style')).join('')}</div>`)
-      + `<div class="grid2">
+    const shape = v => v + ({ '4:5': ' · feed portrait', '1:1': ' · square', '9:16': ' · story / reel', '16:9': ' · wide' }[v] || '');
+    const grid = f.image
+      ? `<div class="grid2">${field('Shape', sel('aspect', CS.OPTIONS.aspects, d.aspect, shape))}${field('How many', sel('count', CS.OPTIONS.counts, d.count))}${field('Brand promo', brands)}</div>`
+      : `<div class="grid2">
           ${field('Platform', sel('platform', CS.OPTIONS.platforms, d.platform))}
           ${field('Length', sel('duration', CS.OPTIONS.durations, d.duration, v => v + ' sec'))}
           ${field('Opening hook', sel('hook', CS.OPTIONS.hooks, d.hook))}
           ${field('Brand promo', brands)}
-        </div>`
+        </div>`;
+    return field(f.id === 'sing' ? 'Performance style' : 'Style', `<div class="chips">${f.styles.map(s => chip('radio', 'style', s, esc(s.replace(/^Recommended: /, '')) + (s.indexOf('Recommended') === 0 ? ' <small>★</small>' : ''), d.style === s, 'style')).join('')}</div>`)
+      + grid
       + field(esc(f.notesLabel || 'Extra notes') + ' <span class="muted">(optional)</span>', `<textarea data-bind="create.notes" placeholder="Anything else Claude should know…">${esc(d.notes)}</textarea>`);
   }
 
@@ -99,11 +104,15 @@
       ${chk.missing.length ? `<ul class="checklist miss">${chk.missing.map(m => `<li>Add ${esc(m)}</li>`).join('')}</ul>` : ''}
       ${chk.warn.length ? `<ul class="checklist warn">${chk.warn.map(m => `<li>${esc(m)}</li>`).join('')}</ul>` : ''}
       <pre class="prompt tall">${esc(prompt)}</pre>
+      ${f.image ? `<details><summary class="muted" style="cursor:pointer;">Prompt used by “Generate here”</summary><pre class="prompt">${esc(f.imagePrompt(d, CS.buildContext(d)))}</pre></details>` : ''}
       <div class="row">
-        <button class="btn" data-action="createSend" ${ready ? '' : 'disabled'}>Copy &amp; add to queue</button>
+        ${f.image ? `<button class="btn" data-action="createGenerate" ${ready && !gen.busy ? '' : 'disabled'}>${gen.busy ? 'Generating…' : '✨ Generate here'}</button>` : ''}
+        <button class="btn ${f.image ? 'secondary' : ''}" data-action="createSend" ${ready ? '' : 'disabled'}>${f.image ? 'Copy for Higgsfield &amp; queue' : 'Copy &amp; add to queue'}</button>
         <button class="btn secondary" data-action="createDraft" ${ready ? '' : 'disabled'}>Save as draft</button>
       </div>
-      <div class="muted" style="margin-top:8px;">Paste the copied prompt into your Claude chat with the Higgsfield connector on. Then mark the job done in the Queue.</div>
+      <div class="muted" style="margin-top:8px;">${f.image
+        ? 'Generate here makes pictures right now. To keep the creator’s locked face (Soul ID), copy the prompt into your Claude chat with the Higgsfield connector on instead.'
+        : 'Paste the copied prompt into your Claude chat with the Higgsfield connector on. Then mark the job done in the Queue and attach the finished file.'}</div>
       <button class="link-btn" data-action="createReset">Reset this form</button>
     </div>`;
   }
@@ -114,7 +123,7 @@
       CS.S.lastFormat = cur;
       const f = CS.FORMATS[cur], d = draft(cur);
       const sections = [
-        ['Concept', 'What is this video about?', secConcept(f, d)],
+        ['Concept', f.image ? 'What is in the photo?' : 'What is this video about?', secConcept(f, d)],
         ['Creator', f.creator === 'required' ? 'Who is on screen? (required)' : 'Who is on screen? (optional)', secCreator(f, d)],
         ['Look', 'Outfit, setting and props', secLook(d)],
         ['Sound', 'How should it sound?', secSound(f, d)],
@@ -125,14 +134,81 @@
         <div class="fmt-tiles">${Object.keys(CS.FORMATS).map(id => { const x = CS.FORMATS[id]; return `<a class="fmt-tile ${id === cur ? 'active' : ''}" href="#/create/${id}"><span class="fmt-icon">${x.icon}</span><b>${x.label}</b><small>${x.tagline}</small></a>`; }).join('')}</div>
         <div class="create-layout">
           <div class="create-form">${sections.map((s, i) => `<section class="step"><div class="step-head"><span class="step-num">${i + 1}</span><h2>${s[0]}</h2><span class="muted">${s[1]}</span></div>${s[2]}</section>`).join('')}</div>
-          <aside class="create-side" id="createSide">${side(f, d)}</aside>
+          <aside class="create-side"><div id="createSide">${side(f, d)}</div><div id="genResults">${genHtml()}</div></aside>
         </div>`;
     }
   };
 
+  /* ---------- in-app picture generation ---------- */
+  // Kept in memory while you're on this page; pictures only become files once you tap Save.
+  const gen = { busy: false, pending: 0, total: 0, items: [], errors: [] };
+  let gid = 0;
+
+  function genHtml() {
+    if (!CS.FORMATS[cur].image || (!gen.busy && !gen.items.length && !gen.errors.length)) return '';
+    const unsaved = gen.items.filter(i => !i.saved).length;
+    const cr = gen.items[0] ? CS.find.creator(gen.items[0].creatorId) : null;
+    return `<div class="card" id="genCard">
+      <div class="row between"><h2>Results</h2><span class="muted">via ${esc(CS.imagegen.label())}</span></div>
+      ${gen.busy ? `<div class="muted" style="margin:6px 0;">⏳ Making picture ${gen.total - gen.pending + 1} of ${gen.total}… this can take up to a minute each.</div>` : ''}
+      ${gen.errors.map(e => `<div class="err-line">✕ ${esc(e)}</div>`).join('')}
+      ${gen.items.length ? `<div class="gen-grid">${gen.items.map(i => `
+        <figure class="gen-item"><img src="${i.url}" alt="Generated picture" data-action="genView" data-id="${i.id}">
+          <div class="row">${i.saved ? `<span class="tag done">✓ saved${i.synced ? ' to phone' : ''}</span>` : `<button class="btn small" data-action="genSave" data-id="${i.id}">Save</button>`}
+          <button class="btn small ghost" data-action="genDrop" data-id="${i.id}">✕</button></div></figure>`).join('')}</div>` : ''}
+      ${unsaved > 1 ? `<div class="row" style="margin-top:8px;"><button class="btn secondary small" data-action="genSaveAll">Save all ${unsaved}</button><button class="link-btn" data-action="genDropAll">Discard all</button></div>` : ''}
+      ${gen.items.length ? `<div class="muted" style="margin-top:8px;">Saved pictures go to <b>${esc(CS.media.ROOT)} / ${esc(cr ? CS.media.folderFor(cr.id) : '…')} / Pics</b> and appear in <a href="#/files">Files</a>.</div>` : ''}
+      ${CS.imagegen.settings().provider === 'free' ? '<div class="muted" style="margin-top:6px;">The free service can’t keep the same face between pictures. For a consistent look use Higgsfield, or add your own provider in Settings.</div>' : ''}
+    </div>`;
+  }
+
+  async function generate() {
+    const f = CS.FORMATS[cur], d = draft(cur);
+    if (gen.busy) return;
+    if (CS.checkDraft(cur, d).missing.length) { CS.ui.toast('Fill in the missing items first.'); return; }
+    if (!CS.imagegen.ready()) { CS.ui.toast('Add your image provider key in Settings first.', { label: 'Settings', fn: () => CS.go('settings') }); return; }
+    const prompt = f.imagePrompt(d, CS.buildContext(d)), n = parseInt(d.count, 10) || 1, base = Math.floor(Math.random() * 1e6);
+    Object.assign(gen, { busy: true, pending: n, total: n, errors: [] });
+    renderGen();
+    const card = document.getElementById('genCard'); if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    for (let i = 0; i < n; i++) { // one at a time: kinder to the free service, and you see each picture as it lands
+      try {
+        const blob = await CS.imagegen.generate(prompt, d.aspect, base + i);
+        gen.items.push({ id: 'g' + (++gid), blob, url: URL.createObjectURL(blob), saved: false, synced: false, creatorId: d.creatorId, prompt });
+      } catch (e) { gen.errors.push(e.message || String(e)); if (/busy|key|Unauthorized|Incorrect/i.test(e.message || '')) { gen.pending = 0; break; } }
+      gen.pending--; renderGen();
+    }
+    Object.assign(gen, { busy: false, pending: 0 });
+    renderGen();
+  }
+
+  async function saveItem(i) {
+    if (i.saved) return true;
+    try {
+      const rec = await CS.media.add({ blob: i.blob, kind: 'pic', creatorId: i.creatorId, source: 'generated', prompt: i.prompt });
+      i.saved = rec.id; i.synced = rec.synced; return true;
+    } catch (e) { CS.ui.toast('Couldn’t save: ' + (e.message || 'storage is full')); return false; }
+  }
+  const findGen = id => gen.items.find(x => x.id === id);
+  const dropGen = i => { URL.revokeObjectURL(i.url); gen.items = gen.items.filter(x => x !== i); };
+  const afterSave = () => {
+    renderGen();
+    CS.media.status().then(st => {
+      if (st === 'ready') CS.ui.toast('Saved to your phone folder.');
+      else CS.ui.toast('Saved in the app.', { label: 'Set up phone folder', fn: () => CS.go('files') });
+    });
+  };
+  CS.actions.createGenerate = generate;
+  CS.actions.genSave = async d => { const i = findGen(d.id); if (i && await saveItem(i)) afterSave(); };
+  CS.actions.genSaveAll = async () => { for (const i of gen.items.filter(x => !x.saved)) await saveItem(i); afterSave(); };
+  CS.actions.genDrop = d => { const i = findGen(d.id); if (i) { dropGen(i); renderGen(); } };
+  CS.actions.genDropAll = () => { gen.items.filter(x => !x.saved).forEach(dropGen); renderGen(); };
+  CS.actions.genView = d => { const i = findGen(d.id); if (i) CS.ui.modal({ title: 'Preview', wide: true, body: `<img src="${i.url}" alt="" style="width:100%;border-radius:8px;">`, footer: `<button class="btn secondary" data-action="closeModal">Close</button>` }); };
+
   /* ---------- interactions ---------- */
   function rerender() { const y = window.scrollY; CS.render(); window.scrollTo(0, y); }
   function updateSide() { const el = document.getElementById('createSide'); if (el) el.innerHTML = side(CS.FORMATS[cur], draft(cur)); }
+  function renderGen() { const el = document.getElementById('genResults'); if (el) el.innerHTML = genHtml(); updateSide(); }
   let persistTimer;
   function persistSoon() { clearTimeout(persistTimer); persistTimer = setTimeout(CS.persist, 300); }
 

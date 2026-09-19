@@ -53,7 +53,7 @@ window.CS = { S: null, actions: {}, binds: {}, views: {}, ui: {} };
       v: VERSION, seq: 1, lastFormat: 'ugc',
       creators: [], wardrobe: [], backgrounds: [], accessories: [], brands: [], trends: [], jobs: [],
       drafts: {},
-      settings: { plan: 'Not subscribed yet', allowance: 1000, budget: 50, creditLog: [] }
+      settings: { plan: 'Not subscribed yet', allowance: 1000, budget: 50, creditLog: [], imagegen: { provider: 'free', baseUrl: 'https://api.openai.com/v1', model: 'gpt-image-1', apiKey: '' } }
     };
   }
 
@@ -61,6 +61,7 @@ window.CS = { S: null, actions: {}, binds: {}, views: {}, ui: {} };
   function normalize(raw) {
     const s = Object.assign(defaults(), raw && typeof raw === 'object' ? raw : {});
     s.settings = Object.assign(defaults().settings, s.settings || {});
+    s.settings.imagegen = Object.assign(defaults().settings.imagegen, s.settings.imagegen || {});
     ['creators', 'wardrobe', 'backgrounds', 'accessories', 'brands', 'trends', 'jobs'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
     if (!Array.isArray(s.settings.creditLog)) s.settings.creditLog = [];
     if (!s.drafts || typeof s.drafts !== 'object') s.drafts = {};
@@ -153,6 +154,7 @@ window.CS = { S: null, actions: {}, binds: {}, views: {}, ui: {} };
     { id: 'create', label: 'Create', icon: '✨', cta: true },
     { id: 'queue', label: 'Queue', icon: '📋' },
     { id: 'creators', label: 'Creators', icon: '🧑‍🎤' },
+    { id: 'files', label: 'Files', icon: '📁' },
     { id: 'library', label: 'Library', icon: '👗' },
     { id: 'brands', label: 'Brands', icon: '🏷️' },
     { id: 'trends', label: 'Trends', icon: '🔥' },
@@ -176,7 +178,7 @@ window.CS = { S: null, actions: {}, binds: {}, views: {}, ui: {} };
     document.getElementById('app').innerHTML = v.render(r.params);
     document.getElementById('nav').innerHTML = CS.routes.map(x => `<a href="#/${x.id}" class="${x.id === r.id ? 'active' : ''}">${x.label}</a>`).join('');
     document.getElementById('navBottom').innerHTML = CS.routes
-      .filter(x => ['home', 'queue', 'create', 'creators', 'library', 'trends', 'brands', 'settings'].includes(x.id))
+
       .map(x => `<a href="#/${x.id}" class="${x.id === r.id ? 'active' : ''} ${x.cta ? 'main-cta' : ''}"><span class="ic">${x.icon}</span>${x.label}</a>`).join('');
     document.title = (r.id === 'home' ? '' : CS.routes.find(x => x.id === r.id).label + ' · ') + 'Creator Studio';
     const used = CS.creditsUsed(), allow = CS.S.settings.allowance || 0;

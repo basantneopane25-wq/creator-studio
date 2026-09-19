@@ -4,6 +4,8 @@
   CS.OPTIONS = {
     platforms: ['TikTok', 'Instagram Reels', 'YouTube Shorts'],
     durations: ['15', '30', '45', '60'],
+    aspects: ['4:5', '1:1', '9:16', '16:9'],
+    counts: ['1', '2', '4'],
     hooks: ['Let Claude decide', 'Question', 'Bold claim', 'Visual shock', 'POV', 'Story cliffhanger']
   };
 
@@ -15,7 +17,7 @@
   };
 
   /* ---------- prompt building blocks ---------- */
-  function castBlock(d, c) {
+  function castBlock(d, c, noVoice) {
     const cr = c.creator;
     if (!cr) return 'Creator: none — no fixed identity needed unless the concept calls for one.';
     const lines = [`Creator: ${cr.name} — ${[cr.gender, cr.ethnicity, cr.bodyType, cr.age].filter(Boolean).join(', ')}`];
@@ -23,7 +25,7 @@
     lines.push(cr.locked
       ? 'Identity: LOCKED Soul ID — do not change face, body or overall look.'
       : 'Identity: not locked yet — use the saved Soul ID if one exists, otherwise ask me before generating.');
-    lines.push(d.audioMode === 'new'
+    if (!noVoice) lines.push(d.audioMode === 'new'
       ? `Voice: ${cr.voiceName || '(none set)'} — reuse this saved voice, never generate a new one for them.`
       : `Voice: their saved voice ("${cr.voiceName || 'none set'}") is NOT used in this video.`);
     return lines.join('\n');
@@ -167,6 +169,54 @@
       ])
     },
 
+    photo: {
+      id: 'photo', icon: '📸', label: 'Influencer Photo', tagline: 'Still pics for posts — make them here or in Higgsfield.',
+      creator: 'required', showLook: true, audio: [], image: true,
+      concept: { label: 'Scene / what the photo shows', required: true, placeholder: 'e.g. grabbing an iced coffee outside a café, laughing at the camera' },
+      styles: [
+        'Recommended: candid selfie, natural light',
+        'Mirror selfie, outfit check',
+        'Lifestyle shot, golden hour, shallow depth of field',
+        'Clean studio portrait, soft light',
+        'Gym / fitness shot',
+        'Travel shot with a scenic backdrop'
+      ],
+      ideas: [
+        'Iced coffee on a café terrace, laughing at something off-camera',
+        'Getting ready in the mirror before a night out',
+        'Post-workout in the gym, casual and sweaty',
+        'Walking through a street market, looking back over the shoulder',
+        'Sitting on a rooftop at sunset with a city view',
+        'Unboxing a package on the couch, genuinely excited'
+      ],
+      notesLabel: 'Extra direction (pose, mood, camera angle)',
+      // Short text prompt for the in-app generator (no Soul ID here — see the note in the UI)
+      imagePrompt: (d, c) => {
+        const cr = c.creator;
+        const subject = cr
+          ? [[cr.ethnicity, cr.gender === 'female' ? 'woman' : 'man'].filter(Boolean).join(' '), cr.age && 'aged ' + cr.age, cr.bodyType && cr.bodyType.toLowerCase() + ' build', cr.profession].filter(Boolean).join(', ')
+          : 'a person';
+        const bits = [
+          `Photorealistic photo, ${cleanStyle(d).toLowerCase()}`,
+          `Subject: ${subject}`,
+          `Scene: ${d.concept}`,
+          c.wardrobe.length ? 'Wearing: ' + c.wardrobe.map(w => w.name + (w.desc ? ' (' + w.desc + ')' : '')).join(' and ') : '',
+          c.background ? 'Setting: ' + c.background.name + (c.background.desc ? ', ' + c.background.desc : '') : '',
+          c.accessories.length ? 'Props: ' + c.accessories.map(a => a.name).join(', ') : '',
+          d.notes,
+          'Natural skin texture, realistic lighting, sharp focus, no text, no watermark'
+        ];
+        return bits.filter(Boolean).join('. ');
+      },
+      build: (d, c) => join([
+        'INFLUENCER PHOTO',
+        castBlock(d, c, true), lookBlock(c), brandBlock(c),
+        `Scene: ${d.concept}`,
+        styleLine(d), notesLine(d),
+        `Instructions: generate ${d.count} photorealistic still image${d.count === '1' ? '' : 's'} in Higgsfield using the creator's Soul ID, so the face and body match every other post. Natural skin texture, no text or watermarks. Aspect ratio ${d.aspect}. Then save the result${d.count === '1' ? '' : 's'} to the creator's library.`
+      ])
+    },
+
     copy: {
       id: 'copy', icon: '🔁', label: 'Copy a Trend', tagline: 'Recreate a viral video with your own creator.',
       creator: 'required', showLook: true, audio: ['original', 'new'], url: true,
@@ -194,7 +244,7 @@
     return {
       concept: '', style: f.styles[0], creatorId: '', wardrobeIds: [], backgroundId: '', accessoryIds: [], brandId: '',
       platform: 'TikTok', duration: '30', hook: 'Let Claude decide',
-      audioMode: f.audio[0], audioText: '', audioFile: null, notes: '', url: '', product: '', cta: ''
+      audioMode: f.audio[0] || '', aspect: '4:5', count: '1', audioText: '', audioFile: null, notes: '', url: '', product: '', cta: ''
     };
   };
 

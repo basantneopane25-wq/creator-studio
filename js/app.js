@@ -27,6 +27,8 @@
   window.addEventListener('hashchange', () => { CS.ui.closeModal(); CS.render(); window.scrollTo(0, 0); });
 
   CS.render();
+  // the media library loads asynchronously; re-render once it's ready so Files / Queue can show it
+  CS.media.init().then(() => CS.render());
 
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
