@@ -7,7 +7,7 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html{-webkit-text-size-adjust:100%;}
 html,body{overscroll-behavior-y:contain;}
-body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.45;padding-top:env(safe-area-inset-top);}
+body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.45;}
 button,.btn,.chip,.pick,.fmt-tile,.nav-bottom a{touch-action:manipulation;}
 a{color:var(--accent);text-decoration:none;}
 h1,h2,h3,h4{margin:0;}
